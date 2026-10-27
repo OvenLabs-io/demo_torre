@@ -9,6 +9,7 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   server: { port: 5173 },
+  preview: { host: true, port: Number(process.env.PORT) || 3000, allowedHosts: true },
   build: {
     rollupOptions: {
       output: {
