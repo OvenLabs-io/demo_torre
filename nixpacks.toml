@@ -1,0 +1,10 @@
+# Easypanel construye con Nixpacks: comandos explícitos para que no adivine
+# (sin esto servía el index.html fuente y el navegador recibía main.tsx como text/plain).
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm start"
