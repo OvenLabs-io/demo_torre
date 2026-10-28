@@ -82,7 +82,7 @@ export function AlertsPage() {
 
       <div className="flex min-h-0 flex-1 gap-3.5">
         {/* Inbox */}
-        <section className="flex w-[470px] shrink-0 flex-col overflow-hidden rounded-md border border-line bg-white">
+        <section className="flex w-[540px] shrink-0 flex-col overflow-hidden rounded-md border border-line bg-white">
           <div className="flex items-center gap-2 border-b border-line bg-surface-alt px-3 py-2.5">
             <Segmented<InboxTab>
               size="sm"
@@ -97,7 +97,7 @@ export function AlertsPage() {
             />
             <div className="flex-1" />
             <Select
-              className="w-[104px]"
+              className="w-[130px]"
               value={sev}
               onChange={(e) => setSev(e.target.value as 'all' | Severity)}
               aria-label="Severidad"
@@ -108,7 +108,7 @@ export function AlertsPage() {
             {list.length === 0 ? (
               <div className="flex flex-col items-center px-6 py-14 text-center text-muted">
                 <BellOff size={22} className="text-faint" />
-                <p className="mt-2 text-[12px]">No hay alertas en esta bandeja.</p>
+                <p className="mt-2 text-[14px]">No hay alertas en esta bandeja.</p>
               </div>
             ) : (
               list.map((a) => <InboxItem key={a.id} alert={a} selected={a.id === selected?.id} onSelect={() => select(a.id)} now={now} />)
@@ -121,7 +121,7 @@ export function AlertsPage() {
           {selected ? (
             <AlertDetail key={selected.id} alert={selected} />
           ) : (
-            <div className="flex flex-1 items-center justify-center text-[12px] text-muted">Selecciona una alerta de la bandeja.</div>
+            <div className="flex flex-1 items-center justify-center text-[14px] text-muted">Selecciona una alerta de la bandeja.</div>
           )}
         </section>
       </div>
@@ -151,16 +151,16 @@ function InboxItem({ alert: a, selected, onSelect, now }: { alert: Alert; select
     >
       <div className="flex items-center gap-2">
         <Dot className={SEVERITY_STYLE[a.severity].dot} size={10} />
-        <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-ink">{a.title}</span>
-        <span className="shrink-0 text-[10px] text-muted">{fmtAgo(a.createdAt, now)}</span>
+        <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink">{a.title}</span>
+        <span className="shrink-0 text-[12px] text-muted">{fmtAgo(a.createdAt, now)}</span>
       </div>
-      <p className="truncate pl-[18px] text-[11px] text-body">{a.context}</p>
+      <p className="truncate pl-[18px] text-[13px] text-body">{a.context}</p>
       <div className="flex items-center gap-1.5 pl-[18px]">
-        <SeverityChip severity={a.severity} className="text-[9px]" />
-        <Chip tone={a.status === 'open' ? 'neutral' : a.status === 'in_progress' ? 'warn' : 'ok'} className="text-[9px]">
+        <SeverityChip severity={a.severity} className="text-[11px]" />
+        <Chip tone={a.status === 'open' ? 'neutral' : a.status === 'in_progress' ? 'warn' : 'ok'} className="text-[11px]">
           {STATUS_LABEL[a.status]}
         </Chip>
-        <span className="truncate font-mono text-[10px]">{meta}</span>
+        <span className="truncate font-mono text-[12px]">{meta}</span>
       </div>
     </button>
   );

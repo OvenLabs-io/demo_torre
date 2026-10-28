@@ -13,6 +13,9 @@ const LEG_LABEL: Record<LegKind, string> = {
   terminal_delivery: 'Entrega en terminal',
   empty_pickup: 'Retiro de vacío',
   empty_return: 'Devolución de vacío',
+  departure: 'Salida',
+  stop: 'Parada intermedia',
+  arrival: 'Destino',
 };
 
 export function legLabel(kind: LegKind): string {

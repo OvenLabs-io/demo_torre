@@ -10,14 +10,14 @@ export function TowerToolbar({ children }: { children?: ReactNode }) {
   const { query, setQuery, groupBy, setGroupBy, onlyAlerts, setOnlyAlerts } = usePrefs();
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-2.5">
-      <div className="relative w-[300px]">
+      <div className="relative w-[380px]">
         <Search size={14} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-faint" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar viaje, tracto, operador, contenedor…"
           aria-label="Buscar viaje, tracto, operador o contenedor"
-          className="h-[30px] w-full rounded-[4px] border border-input bg-white pr-7 pl-8 text-[12px] placeholder:text-faint focus:border-primary focus:outline-none"
+          className="h-[34px] w-full rounded-[4px] border border-input bg-white pr-7 pl-8 text-[14px] placeholder:text-faint focus:border-primary focus:outline-none"
         />
         {query && (
           <button
@@ -31,7 +31,7 @@ export function TowerToolbar({ children }: { children?: ReactNode }) {
         )}
       </div>
       <Select
-        className="w-[200px]"
+        className="w-[260px]"
         value={groupBy}
         onChange={(e) => setGroupBy(e.target.value as 'group' | 'none')}
         aria-label="Agrupar por"
@@ -60,7 +60,7 @@ export function CheckPill({
   return (
     <div
       className={clsx(
-        'flex h-[30px] items-center rounded-[4px] border bg-white px-2.5',
+        'flex h-[34px] items-center rounded-[4px] border bg-white px-2.5',
         checked ? 'border-primary/40' : 'border-input',
       )}
     >
@@ -68,7 +68,7 @@ export function CheckPill({
         checked={checked}
         onChange={onChange}
         disabled={disabled}
-        label={<span className={clsx('text-[12px]', checked ? 'text-primary' : 'text-body')}>{label}</span>}
+        label={<span className={clsx('text-[14px]', checked ? 'text-primary' : 'text-body')}>{label}</span>}
       />
     </div>
   );

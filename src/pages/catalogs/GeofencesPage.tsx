@@ -6,7 +6,7 @@ import { Circle as CircleIcon, Download, Hexagon, MousePointer2, Move, Plus, Rou
 import { toast } from 'sonner';
 import type { Geofence, GeofenceShape } from '@/types/domain';
 import { useNow } from '@/sim/clock';
-import { useStore } from '@/store/useStore';
+import { useCan, useStore } from '@/store/useStore';
 import { fmtNumber, normalize } from '@/lib/format';
 import { isInside, shapeBounds, shapeCenter, shapeSummary } from '@/lib/geofence';
 import { GEOFENCE_TYPE_LABEL } from '@/mocks/geofences';
@@ -68,6 +68,7 @@ const HINT: Record<string, string> = {
 const EMPTY_FORM: EditorForm = { name: '', type: 'destination', clientId: null, toleranceM: 150, validity: 'permanent', ruleIds: ['R-01'], syncToGps: true };
 
 export function GeofencesPage() {
+  const canCreate = useCan('catalogs', 'create');
   const geofences = useStore((s) => s.geofences);
   const clients = useStore((s) => s.clients);
   const trips = useStore((s) => s.trips);
@@ -184,16 +185,20 @@ export function GeofencesPage() {
         subtitle="Se crean y editan aquí (círculo, polígono o corredor de ruta) y se sincronizan con la plataforma GPS del cliente para detectar entradas y salidas. Una geocerca puede ser terminal, patio, destino, punto de interés, parada autorizada o zona a evitar."
         actions={
           <>
-            <span className="mr-2 flex items-center gap-1.5 text-[11px] whitespace-nowrap text-body">
+            <span className="mr-2 flex items-center gap-1.5 text-[13px] whitespace-nowrap text-body">
               <Dot className={pending ? 'bg-med' : 'bg-ok'} />
               Sincronizadas con Wialon hace {syncedMin} min · {geofences.length} geocercas · {pending} pendiente{pending === 1 ? '' : 's'} de enviar
             </span>
+{canCreate && (
+              <>
             <Button icon={<Download size={14} />} onClick={importFromGps} disabled={importing}>
               {importing ? 'Consultando Wialon…' : 'Importar del GPS'}
             </Button>
             <Button variant="primary" icon={<Plus size={14} />} onClick={() => startNew('polygon')}>
               Nueva geocerca
             </Button>
+              </>
+            )}
           </>
         }
       />
@@ -209,7 +214,7 @@ export function GeofencesPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar geocerca…"
                 aria-label="Buscar geocerca"
-                className="h-[30px] w-full rounded-[4px] border border-input pr-2 pl-8 text-[12px] placeholder:text-faint focus:border-primary focus:outline-none"
+                className="h-[34px] w-full rounded-[4px] border border-input pr-2 pl-8 text-[14px] placeholder:text-faint focus:border-primary focus:outline-none"
               />
             </div>
             <Select
@@ -241,9 +246,9 @@ export function GeofencesPage() {
                 >
                   <span className="mt-0.5 size-3 shrink-0 rounded-[2px] border" style={{ borderColor: color, background: `${color}40` }} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12px] font-medium text-ink">{g.name}</p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted">
-                      <Chip tone={TYPE_TONE[g.type]} className="text-[9px]">
+                    <p className="truncate text-[14px] font-medium text-ink">{g.name}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
+                      <Chip tone={TYPE_TONE[g.type]} className="text-[11px]">
                         {GEOFENCE_TYPE_LABEL[g.type]}
                       </Chip>
                       <span>{g.clientId ? clients.find((c) => c.id === g.clientId)?.name : g.type === 'avoid_zone' || g.type === 'authorized_stop' ? 'Sin cliente' : g.locationLabel}</span>
@@ -252,17 +257,17 @@ export function GeofencesPage() {
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {inside > 0 && (
-                      <span className="text-[10px] font-medium text-primary">
+                      <span className="text-[12px] font-medium text-primary">
                         {inside} {inside === 1 ? 'unidad dentro' : 'unidades dentro'}
                       </span>
                     )}
-                    {g.syncStatus === 'pending' && <Chip tone="warn" className="text-[9px]">Pendiente de enviar</Chip>}
-                    {g.syncStatus === 'local' && <Chip tone="muted" className="text-[9px]">Solo en servidor</Chip>}
+                    {g.syncStatus === 'pending' && <Chip tone="warn" className="text-[11px]">Pendiente de enviar</Chip>}
+                    {g.syncStatus === 'local' && <Chip tone="muted" className="text-[11px]">Solo en servidor</Chip>}
                   </div>
                 </button>
               );
             })}
-            {list.length === 0 && <p className="px-4 py-10 text-center text-[12px] text-muted">Ninguna geocerca coincide.</p>}
+            {list.length === 0 && <p className="px-4 py-10 text-center text-[14px] text-muted">Ninguna geocerca coincide.</p>}
           </div>
         </section>
 
@@ -336,7 +341,7 @@ export function GeofencesPage() {
                   aria-pressed={mode === key}
                   onClick={() => setTool(key)}
                   className={clsx(
-                    'flex h-7 items-center gap-1.5 rounded-[3px] px-2.5 text-[11px] whitespace-nowrap',
+                    'flex h-7 items-center gap-1.5 rounded-[3px] px-2.5 text-[13px] whitespace-nowrap',
                     mode === key ? 'bg-primary text-white' : 'text-body hover:bg-line-soft',
                   )}
                 >
@@ -344,13 +349,13 @@ export function GeofencesPage() {
                   {label}
                 </button>
               ))}
-              <button type="button" onClick={onDelete} className="flex h-7 items-center gap-1.5 rounded-[3px] px-2.5 text-[11px] text-body hover:bg-crit-bg hover:text-crit">
+              <button type="button" onClick={onDelete} className="flex h-7 items-center gap-1.5 rounded-[3px] px-2.5 text-[13px] text-body hover:bg-crit-bg hover:text-crit">
                 <Trash2 size={13} />
                 Borrar
               </button>
             </div>
             {HINT[mode] && (
-              <div className="absolute top-12 right-2.5 z-[600] rounded-[4px] bg-[rgba(17,24,39,0.85)] px-3 py-1.5 text-[11px] whitespace-nowrap text-white">
+              <div className="absolute top-12 right-2.5 z-[600] rounded-[4px] bg-[rgba(17,24,39,0.85)] px-3 py-1.5 text-[13px] whitespace-nowrap text-white">
                 {HINT[mode]}
               </div>
             )}
@@ -373,10 +378,10 @@ export function GeofencesPage() {
             )}
 
             <div className="absolute bottom-2.5 left-2.5 z-[500] rounded-[4px] border border-line bg-white px-3 py-2 shadow-sm">
-              <p className="text-[9px] font-semibold tracking-[0.5px] text-muted uppercase">Tipos</p>
+              <p className="text-[11px] font-semibold tracking-[0.5px] text-muted uppercase">Tipos</p>
               <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
                 {TYPE_OPTIONS.map((t) => (
-                  <span key={t.value} className="flex items-center gap-1.5 text-[10px] text-body">
+                  <span key={t.value} className="flex items-center gap-1.5 text-[12px] text-body">
                     <span className="size-2.5 rounded-[2px] border" style={{ borderColor: GEOFENCE_COLOR[t.value], background: `${GEOFENCE_COLOR[t.value]}40` }} />
                     {GEOFENCE_TYPE_LABEL[t.value]}
                   </span>
@@ -445,10 +450,10 @@ function GeofencePanel({
 
   return (
     <div className="scrollbar-thin absolute top-[50px] left-2.5 z-[600] max-h-[calc(100%-60px)] w-[320px] overflow-y-auto rounded-md border border-line bg-white p-3.5 shadow-pop">
-      <h3 className="text-[13px] font-semibold text-ink">{editor.id ? 'Editar geocerca' : 'Nueva geocerca'}</h3>
-      {shape && <span className="mt-1 inline-block rounded-[3px] bg-line-soft px-1.5 py-px font-mono text-[9px] text-body">{shapeSummary(shape)}</span>}
+      <h3 className="text-[15px] font-semibold text-ink">{editor.id ? 'Editar geocerca' : 'Nueva geocerca'}</h3>
+      {shape && <span className="mt-1 inline-block rounded-[3px] bg-line-soft px-1.5 py-px font-mono text-[11px] text-body">{shapeSummary(shape)}</span>}
       {!shape && (
-        <p className="mt-2 rounded-[4px] bg-primary-soft px-2.5 py-2 text-[11px] text-body">
+        <p className="mt-2 rounded-[4px] bg-primary-soft px-2.5 py-2 text-[13px] text-body">
           {drawing ? 'Dibuja la geocerca en el mapa.' : 'Elige Círculo, Polígono o Corredor de ruta en la barra del mapa para dibujarla.'}
         </p>
       )}
@@ -497,7 +502,7 @@ function GeofencePanel({
                 checked={form.ruleIds.includes(id)}
                 onChange={(v) => onForm({ ruleIds: v ? [...form.ruleIds, id] : form.ruleIds.filter((r) => r !== id) })}
                 label={
-                  <span className="text-[11px]">
+                  <span className="text-[13px]">
                     <b className="font-mono">{id}</b> {RULE_HINT[id] ?? ''}
                   </span>
                 }

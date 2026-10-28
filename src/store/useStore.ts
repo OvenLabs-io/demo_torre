@@ -1,14 +1,18 @@
 import { create } from 'zustand';
 import type {
+  Action,
   Alert,
   AlertRule,
   Client,
   Company,
   CrewMember,
   Geofence,
+  Georoute,
   HistoryTrip,
   LogEntry,
+  Module,
   Protocol,
+  Trailer,
   Trip,
   Unit,
   User,
@@ -16,7 +20,9 @@ import type {
 import { TRIPS } from '@/mocks/trips';
 import { UNITS } from '@/mocks/units';
 import { CREW, crewShortName } from '@/mocks/crew';
-import { CLIENTS } from '@/mocks/clients';
+import { CLIENTS, TRIP_GROUPS } from '@/mocks/clients';
+import { TRAILERS } from '@/mocks/trailers';
+import { GEOROUTES } from '@/mocks/georoutes';
 import { GEOFENCES } from '@/mocks/geofences';
 import { ALERTS } from '@/mocks/alerts';
 import { RULES } from '@/mocks/rules';
@@ -35,6 +41,10 @@ export interface AppState {
   crew: CrewMember[];
   clients: Client[];
   geofences: Geofence[];
+  georoutes: Georoute[];
+  trailers: Trailer[];
+  /** Grupos de viaje (names are the ids). */
+  tripGroups: string[];
   alerts: Alert[];
   rules: AlertRule[];
   protocols: Protocol[];
@@ -56,7 +66,6 @@ export interface AppState {
   takeAlert: (id: string) => void;
   completeAlertStep: (alertId: string, stepId: string) => void;
   addAlertAction: (alertId: string, text: string) => void;
-  escalateAlert: (alertId: string) => void;
   closeAlert: (alertId: string, reason: string, comment?: string) => void;
 
   upsertRule: (rule: AlertRule) => void;
@@ -68,6 +77,16 @@ export interface AppState {
   updateUnit: (id: string, patch: Partial<Unit>) => void;
   syncUnits: () => void;
   upsertCrew: (member: CrewMember) => void;
+  upsertTrailer: (trailer: Trailer) => void;
+
+  addTripGroup: (name: string) => void;
+  /** Removes the group; its trips stay active without a group. */
+  deleteTripGroup: (name: string) => void;
+  /** Moves trips into a group (null = sin grupo). */
+  assignTripsToGroup: (tripIds: string[], group: string | null) => void;
+
+  upsertGeoroute: (g: Georoute) => void;
+  deleteGeoroute: (id: string) => void;
 
   geofencesSyncedAt: number;
   /** Saves a geofence; when it syncs to GPS it goes pending → synced after 2 s. */
@@ -75,6 +94,7 @@ export interface AppState {
   deleteGeofence: (id: string) => void;
 
   updateUser: (id: string, patch: Partial<User>) => void;
+  addUser: (user: User) => void;
   updateCompany: (id: string, patch: Partial<Company>) => void;
 }
 
@@ -113,6 +133,9 @@ export const useStore = create<AppState>()((set, get) => {
     crew: CREW,
     clients: CLIENTS,
     geofences: GEOFENCES,
+    georoutes: GEOROUTES,
+    trailers: TRAILERS,
+    tripGroups: TRIP_GROUPS,
     alerts: ALERTS,
     rules: RULES,
     protocols: PROTOCOLS,
@@ -179,8 +202,8 @@ export const useStore = create<AppState>()((set, get) => {
         id: trip.id,
         movement: trip.movement,
         clientId: trip.clientId,
-        container: trip.containers.map((c) => c.number).join(' + '),
-        terminal: 'CONTECON',
+        container: trip.containers.map((c) => c.number).join(' + ') || '—',
+        terminal: trip.containers.length ? 'CONTECON' : '—',
         unitEconomic: units.find((u) => u.id === trip.unitId)?.economic ?? trip.unitId,
         driverShort: driver ? crewShortName(driver) : '—',
         startedAt: trip.createdAt,
@@ -190,6 +213,7 @@ export const useStore = create<AppState>()((set, get) => {
         status: incidents > 0 ? 'closed_incident' : 'closed',
         demurrageMxn: 0,
         onTime: now <= trip.eta + 30 * 60000,
+        log: trip.log,
       };
       set((s) => ({
         trips: s.trips.filter((t) => t.id !== id),
@@ -272,16 +296,6 @@ export const useStore = create<AppState>()((set, get) => {
       }
     },
 
-    escalateAlert: (alertId) =>
-      patchAlert(alertId, (a, s) => {
-        const now = Date.now();
-        const taken = takeIfOpen(a, s, now);
-        return {
-          ...taken,
-          timeline: [...taken.timeline, { at: now, text: `Escalada a seguridad por ${shortUserName(currentUserOf(s).name)}` }],
-        };
-      }),
-
     closeAlert: (alertId, reason, comment) =>
       patchAlert(alertId, (a, s) => {
         const now = Date.now();
@@ -317,6 +331,29 @@ export const useStore = create<AppState>()((set, get) => {
         crew: s.crew.some((c) => c.id === member.id) ? s.crew.map((c) => (c.id === member.id ? member : c)) : [...s.crew, member],
       })),
 
+    upsertTrailer: (trailer) =>
+      set((s) => ({
+        trailers: s.trailers.some((t) => t.id === trailer.id) ? s.trailers.map((t) => (t.id === trailer.id ? trailer : t)) : [...s.trailers, trailer],
+      })),
+
+    /* ---------- Trip groups ---------- */
+    addTripGroup: (name) => set((s) => (s.tripGroups.includes(name) ? {} : { tripGroups: [...s.tripGroups, name] })),
+    deleteTripGroup: (name) =>
+      set((s) => ({
+        tripGroups: s.tripGroups.filter((g) => g !== name),
+        trips: s.trips.map((t) => (t.groupId === name ? { ...t, groupId: null } : t)),
+        users: s.users.map((u) => (u.groupIds.includes(name) ? { ...u, groupIds: u.groupIds.filter((g) => g !== name) } : u)),
+      })),
+    assignTripsToGroup: (tripIds, group) =>
+      set((s) => ({ trips: s.trips.map((t) => (tripIds.includes(t.id) ? { ...t, groupId: group } : t)) })),
+
+    /* ---------- Georoutes ---------- */
+    upsertGeoroute: (g) =>
+      set((s) => ({
+        georoutes: s.georoutes.some((x) => x.id === g.id) ? s.georoutes.map((x) => (x.id === g.id ? g : x)) : [...s.georoutes, g],
+      })),
+    deleteGeoroute: (id) => set((s) => ({ georoutes: s.georoutes.filter((g) => g.id !== id) })),
+
     /* ---------- Geofences ---------- */
     geofencesSyncedAt: T0 - 12 * 60_000,
     saveGeofence: (g) => {
@@ -338,6 +375,7 @@ export const useStore = create<AppState>()((set, get) => {
 
     /* ---------- Users ---------- */
     updateUser: (id, patch) => set((s) => ({ users: s.users.map((u) => (u.id === id ? { ...u, ...patch } : u)) })),
+    addUser: (user) => set((s) => ({ users: [...s.users, user] })),
     updateCompany: (id, patch) => set((s) => ({ companies: s.companies.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
   };
 });
@@ -346,6 +384,11 @@ export const useStore = create<AppState>()((set, get) => {
 
 export function useCurrentUser(): User {
   return useStore((s) => s.users.find((u) => u.id === s.currentUserId)!);
+}
+
+/** Permission check for the current user. Screens and buttons the user can't use are not shown. */
+export function useCan(module: Module, action: Action = 'view'): boolean {
+  return useStore((s) => s.users.find((u) => u.id === s.currentUserId)?.permissions[module][action] ?? false);
 }
 
 export const byId = <T extends { id: string }>(list: T[], id: string | null | undefined): T | undefined =>

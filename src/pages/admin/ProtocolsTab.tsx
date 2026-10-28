@@ -124,7 +124,7 @@ export function ProtocolsTab() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar protocolo…"
               aria-label="Buscar protocolo"
-              className="h-[30px] w-full rounded-[4px] border border-input pr-2 pl-8 text-[12px] placeholder:text-faint focus:border-primary focus:outline-none"
+              className="h-[34px] w-full rounded-[4px] border border-input pr-2 pl-8 text-[14px] placeholder:text-faint focus:border-primary focus:outline-none"
             />
           </div>
         </div>
@@ -142,23 +142,23 @@ export function ProtocolsTab() {
                 )}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[12px] font-medium text-ink">
+                  <p className="truncate text-[14px] font-medium text-ink">
                     {p.name}
-                    {drafts[p.id] && <span className="ml-1.5 text-[10px] font-normal text-high">· sin guardar</span>}
+                    {drafts[p.id] && <span className="ml-1.5 text-[12px] font-normal text-high">· sin guardar</span>}
                   </p>
-                  <p className="text-[10px] text-muted">
+                  <p className="text-[12px] text-muted">
                     {p.steps.length} {p.steps.length === 1 ? 'paso' : 'pasos'} · SLA {fmtSla(p.slaMinutes)}
                   </p>
                 </div>
                 <div className="flex gap-1">
                   {ids.length ? (
                     ids.map((id) => (
-                      <span key={id} className="rounded-[3px] bg-line-soft px-1.5 py-px font-mono text-[9px] text-body">
+                      <span key={id} className="rounded-[3px] bg-line-soft px-1.5 py-px font-mono text-[11px] text-body">
                         {id}
                       </span>
                     ))
                   ) : (
-                    <span className="text-[10px] text-faint">sin regla</span>
+                    <span className="text-[12px] text-faint">sin regla</span>
                   )}
                 </div>
               </button>
@@ -172,7 +172,7 @@ export function ProtocolsTab() {
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-line bg-white">
           <div className="flex items-center gap-3 border-b border-line bg-surface-alt px-4 py-3">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1 text-[13px] font-semibold text-ink">
+              <div className="flex items-center gap-1 text-[15px] font-semibold text-ink">
                 <span className="shrink-0">Protocolo ·</span>
                 <input
                   value={draft.name}
@@ -181,20 +181,19 @@ export function ProtocolsTab() {
                   className="min-w-0 flex-1 rounded-[3px] bg-transparent px-1 py-0.5 hover:bg-white focus:bg-white focus:outline-1 focus:outline-input"
                 />
               </div>
-              <p className="mt-0.5 text-[10px] text-muted">
+              <p className="mt-0.5 text-[12px] text-muted">
                 {usedBy(draft.id).length ? `Usado por ${usedBy(draft.id).join(', ')}` : 'Aún no lo usa ninguna regla'} · última edición{' '}
                 {fmtDate(draft.updatedAt, true)} · {draft.updatedBy}
               </p>
             </div>
             <Select
-              className="w-[120px]"
+              className="w-[140px]"
               value={String(draft.slaMinutes)}
               onChange={(e) => edit((p) => ({ ...p, slaMinutes: Number(e.target.value) }))}
               aria-label="SLA"
               options={[2, 5, 10, 15, 30, 60, 1440].map((m) => ({ value: String(m), label: `SLA ${fmtSla(m)}` }))}
             />
             <Button onClick={duplicate}>Duplicar</Button>
-            <Button onClick={() => toast('Disponible próximamente', { description: 'Historial de cambios del protocolo.' })}>Historial de cambios</Button>
           </div>
 
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-4 py-3.5">
@@ -223,41 +222,41 @@ export function ProtocolsTab() {
                   >
                     <GripVertical size={16} />
                   </span>
-                  <span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-[11px] text-white">{i + 1}</span>
+                  <span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-[13px] text-white">{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <input
                       value={s.title}
                       onChange={(e) => editStep(i, { title: e.target.value })}
                       placeholder="Título del paso"
-                      className="h-7 w-full rounded-[3px] border border-transparent px-1.5 text-[12px] font-medium text-ink hover:border-line focus:border-input focus:outline-none"
+                      className="h-7 w-full rounded-[3px] border border-transparent px-1.5 text-[14px] font-medium text-ink hover:border-line focus:border-input focus:outline-none"
                     />
                     <input
                       value={s.description}
                       onChange={(e) => editStep(i, { description: e.target.value })}
                       placeholder="Descripción"
-                      className="h-6 w-full rounded-[3px] border border-transparent px-1.5 text-[11px] text-muted hover:border-line focus:border-input focus:outline-none"
+                      className="h-6 w-full rounded-[3px] border border-transparent px-1.5 text-[13px] text-muted hover:border-line focus:border-input focus:outline-none"
                     />
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 px-1.5">
                       <Select
-                        className="w-[230px]"
+                        className="w-[290px]"
                         value={s.owner}
                         onChange={(e) => editStep(i, { owner: e.target.value })}
                         options={withCurrent(OWNERS, s.owner).map((o) => ({ ...o, label: `Responsable: ${o.label}` }))}
                       />
                       <Select
-                        className="w-[165px]"
+                        className="w-[200px]"
                         value={String(s.maxMinutes)}
                         onChange={(e) => editStep(i, { maxMinutes: Number(e.target.value) })}
                         options={withCurrent(MAX_MINUTES.map(String), String(s.maxMinutes)).map((o) => ({ ...o, label: `Tiempo máx.: ${o.label} min` }))}
                       />
                       <Select
-                        className="w-[190px]"
+                        className="w-[220px]"
                         value={s.evidence}
                         onChange={(e) => editStep(i, { evidence: e.target.value as ProtocolStep['evidence'] })}
                         options={EVIDENCE.map((x) => ({ value: x.key, label: x.label }))}
                       />
                       {s.evidence === 'auto' && (
-                        <Toggle checked={Boolean(s.sendsMessage)} onChange={(v) => editStep(i, { sendsMessage: v })} label={<span className="text-[11px] font-normal">Envía mensaje al marcar</span>} />
+                        <Toggle checked={Boolean(s.sendsMessage)} onChange={(v) => editStep(i, { sendsMessage: v })} label={<span className="text-[13px] font-normal">Envía mensaje al marcar</span>} />
                       )}
                     </div>
                   </div>
@@ -275,7 +274,7 @@ export function ProtocolsTab() {
             <button
               type="button"
               onClick={() => edit((p) => ({ ...p, steps: [...p.steps, newStep()] }))}
-              className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-[5px] border border-dashed border-input text-[12px] text-body hover:bg-surface-alt"
+              className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-[5px] border border-dashed border-input text-[14px] text-body hover:bg-surface-alt"
             >
               <Plus size={14} /> Agregar paso
             </button>
@@ -289,7 +288,7 @@ export function ProtocolsTab() {
           </div>
 
           <div className="flex items-center gap-2 border-t border-line bg-surface-alt px-4 py-2.5">
-            <p className="flex-1 text-[11px] text-muted">Los cambios aplican a alertas nuevas; las abiertas conservan su protocolo.</p>
+            <p className="flex-1 text-[13px] text-muted">Los cambios aplican a alertas nuevas; las abiertas conservan su protocolo.</p>
             <Button onClick={discard} disabled={!dirty}>
               Descartar
             </Button>
@@ -299,7 +298,7 @@ export function ProtocolsTab() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-1 items-center justify-center rounded-md border border-line bg-white text-[12px] text-muted">Selecciona un protocolo.</div>
+        <div className="flex flex-1 items-center justify-center rounded-md border border-line bg-white text-[14px] text-muted">Selecciona un protocolo.</div>
       )}
     </div>
   );

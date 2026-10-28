@@ -21,23 +21,23 @@ export function Field({
 }) {
   return (
     <div className={clsx('flex min-w-0 flex-col gap-1', className)}>
-      <span className="flex items-center gap-1.5 text-[11px] text-body">
+      <span className="flex items-center gap-1.5 text-[13px] text-body">
         {label}
         {required && <span className="text-crit">*</span>}
         {extra}
       </span>
       {children}
       {error ? (
-        <span className="text-[10px] text-crit">{error}</span>
+        <span className="text-[12px] text-crit">{error}</span>
       ) : help ? (
-        <span className="text-[10px] text-muted">{help}</span>
+        <span className="text-[12px] text-muted">{help}</span>
       ) : null}
     </div>
   );
 }
 
 const inputBase =
-  'h-[30px] w-full min-w-0 rounded-[4px] border bg-white px-2.5 text-[12px] text-ink placeholder:text-faint focus:border-primary focus:outline-none disabled:bg-line-soft disabled:text-muted';
+  'h-[34px] w-full min-w-0 rounded-[4px] border bg-white px-2.5 text-[14px] text-ink placeholder:text-faint focus:border-primary focus:outline-none disabled:bg-line-soft disabled:text-muted';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean;

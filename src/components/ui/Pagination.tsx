@@ -16,7 +16,7 @@ export function Pagination({ page, pages, onChange }: { page: number; pages: num
     if (pages > (items[items.length - 1] as number) + 1) items.push('…');
     add(pages);
   }
-  const btn = 'flex size-6 items-center justify-center rounded-[3px] border text-[11px] font-mono';
+  const btn = 'flex size-6 items-center justify-center rounded-[3px] border text-[13px] font-mono';
   return (
     <div className="flex items-center gap-1">
       <button type="button" aria-label="Página anterior" disabled={page === 1} onClick={() => onChange(page - 1)} className={clsx(btn, 'border-line bg-white text-body disabled:opacity-40')}>
@@ -24,7 +24,7 @@ export function Pagination({ page, pages, onChange }: { page: number; pages: num
       </button>
       {items.map((it, i) =>
         it === '…' ? (
-          <span key={`e${i}`} className="w-4 text-center text-[11px] text-muted">
+          <span key={`e${i}`} className="w-4 text-center text-[13px] text-muted">
             …
           </span>
         ) : (

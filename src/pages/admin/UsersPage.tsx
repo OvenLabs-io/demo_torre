@@ -3,15 +3,14 @@ import clsx from 'clsx';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Action, Module, PermissionMatrix, RoleKey, User } from '@/types/domain';
-import { useStore } from '@/store/useStore';
+import { useCan, useStore } from '@/store/useStore';
 import { useNow } from '@/sim/clock';
 import { fmtAgo, fmtTime } from '@/lib/format';
 import { ACTIONS, MODULES, ROLES } from '@/mocks/users';
-import { TRIP_GROUPS } from '@/mocks/clients';
-import { PageHeader } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { Select } from '@/components/ui/Field';
+import { Field, Input, Select } from '@/components/ui/Field';
+import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 function lastAccess(u: User, now: number): string {
@@ -32,9 +31,15 @@ function diffCount(m: PermissionMatrix, base: PermissionMatrix): number {
   return n;
 }
 
-export function UsersPage() {
+/** Usuarios → Torre de control: who uses the tower and what each one can see and do. */
+export function TowerUsersPanel() {
   const users = useStore((s) => s.users);
   const updateUser = useStore((s) => s.updateUser);
+  const addUser = useStore((s) => s.addUser);
+  const canEdit = useCan('users', 'edit');
+  const canCreate = useCan('users', 'create');
+  const [adding, setAdding] = useState(false);
+  const tripGroups = useStore((s) => s.tripGroups);
   const now = useNow();
   const [selectedId, setSelectedId] = useState('u-lgo');
   const [drafts, setDrafts] = useState<Record<string, User>>({});
@@ -73,21 +78,23 @@ export function UsersPage() {
   const rows = useMemo(() => users, [users]);
 
   return (
-    <div className="flex flex-col gap-3.5 px-6 py-5">
-      <PageHeader
-        title="Usuarios y permisos"
-        subtitle="Permisos granulares por módulo (ver / crear / editar / eliminar / exportar) partiendo de un rol base, y alcance por grupo de viaje."
-        actions={
-          <Button variant="primary" icon={<Plus size={14} />} onClick={() => toast('Disponible próximamente', { description: 'Invitar usuarios por correo.' })}>
-            Invitar usuario
+    <div className="flex flex-col gap-3.5">
+      <div className="flex items-center gap-3">
+        <p className="flex-1 text-[13px] text-muted">
+          Permisos granulares por módulo (ver / crear / editar / eliminar / exportar) partiendo de un rol base, y alcance por grupo de viaje. Lo que un
+          usuario no tiene permitido no le aparece en el menú ni en los botones.
+        </p>
+        {canCreate && (
+          <Button variant="primary" icon={<Plus size={16} />} onClick={() => setAdding(true)}>
+            Agregar usuario
           </Button>
-        }
-      />
+        )}
+      </div>
 
       <div className="flex items-start gap-3.5">
         {/* Users */}
-        <div className="w-[620px] shrink-0 overflow-hidden rounded-md border border-line bg-white">
-          <table className="w-full table-fixed border-collapse text-[12px]">
+        <div className="w-[720px] shrink-0 overflow-hidden rounded-md border border-line bg-white">
+          <table className="w-full table-fixed border-collapse text-[14px]">
             <thead>
               <tr>
                 <th className="th w-[150px]">Usuario</th>
@@ -109,12 +116,12 @@ export function UsersPage() {
                   >
                     <td className={clsx('truncate px-3', sel && 'border-l-[3px] border-l-primary pl-[9px]', u.active ? 'text-ink' : 'text-faint')}>
                       {u.name}
-                      {d && JSON.stringify(d) !== JSON.stringify(u) && <span className="ml-1 text-[10px] text-high">·</span>}
+                      {d && JSON.stringify(d) !== JSON.stringify(u) && <span className="ml-1 text-[12px] text-high">·</span>}
                     </td>
-                    <td className="truncate px-3 text-[11px] text-body">{u.email}</td>
+                    <td className="truncate px-3 text-[13px] text-body">{u.email}</td>
                     <td className="truncate px-3 text-body">{ROLES[u.baseRole].label}</td>
                     <td className="truncate px-3 text-body">{u.scopeLabel}</td>
-                    <td className={clsx('px-3 text-[11px] whitespace-nowrap', u.active ? 'text-body' : 'text-faint')}>{lastAccess(u, now)}</td>
+                    <td className={clsx('px-3 text-[13px] whitespace-nowrap', u.active ? 'text-body' : 'text-faint')}>{lastAccess(u, now)}</td>
                   </tr>
                 );
               })}
@@ -125,10 +132,10 @@ export function UsersPage() {
         {/* Detail */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-line bg-white">
           <div className="flex items-center gap-3 border-b border-line px-4 py-3">
-            <span className={clsx('flex size-8 items-center justify-center rounded-full text-[11px] font-bold text-white', user.active ? 'bg-primary' : 'bg-faint')}>{user.initials}</span>
+            <span className={clsx('flex size-8 items-center justify-center rounded-full text-[13px] font-bold text-white', user.active ? 'bg-primary' : 'bg-faint')}>{user.initials}</span>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-ink">{user.name}</p>
-              <p className="text-[11px] text-muted">
+              <p className="text-[15px] font-semibold text-ink">{user.name}</p>
+              <p className="text-[13px] text-muted">
                 {user.email} · {user.active ? 'activo' : 'inactivo'}
                 {user.shift ? ` · ${user.shift}` : ''}
               </p>
@@ -148,7 +155,7 @@ export function UsersPage() {
           <div className="px-4 py-3.5">
             <div className="flex items-center gap-3">
               <p className="label-section">Permisos por módulo</p>
-              <span className={clsx('text-[11px]', changes ? 'text-high' : 'text-muted')}>
+              <span className={clsx('text-[13px]', changes ? 'text-high' : 'text-muted')}>
                 {changes ? `Personalizado · ${changes} ${changes === 1 ? 'cambio' : 'cambios'} respecto al rol` : 'Igual al rol base'}
               </span>
               <div className="flex-1" />
@@ -157,7 +164,7 @@ export function UsersPage() {
               </Button>
             </div>
 
-            <table className="mt-2.5 w-full border-collapse text-[12px]">
+            <table className="mt-2.5 w-full border-collapse text-[14px]">
               <thead>
                 <tr>
                   <th className="th w-[280px]">Módulo</th>
@@ -192,11 +199,11 @@ export function UsersPage() {
                 })}
               </tbody>
             </table>
-            <p className="mt-2 text-[10px] text-muted">Marco naranja = difiere del rol base. Quitar "Ver" desactiva el resto del módulo.</p>
+            <p className="mt-2 text-[12px] text-muted">Marco naranja = difiere del rol base. Quitar "Ver" desactiva el resto del módulo.</p>
 
             <p className="label-section mt-5">Grupos de viaje que ve</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {TRIP_GROUPS.map((g) => {
+              {tripGroups.map((g) => {
                 const on = user.groupIds.includes(g);
                 return (
                   <button
@@ -205,7 +212,7 @@ export function UsersPage() {
                     aria-pressed={on}
                     onClick={() => toggleGroup(g)}
                     className={clsx(
-                      'h-7 rounded-[4px] border px-2.5 font-mono text-[11px] transition-colors',
+                      'h-7 rounded-[4px] border px-2.5 font-mono text-[13px] transition-colors',
                       on ? 'border-primary bg-primary text-white' : 'border-input bg-white text-body hover:bg-surface-alt',
                     )}
                   >
@@ -214,7 +221,7 @@ export function UsersPage() {
                 );
               })}
             </div>
-            <p className="mt-1.5 text-[10px] text-muted">
+            <p className="mt-1.5 text-[12px] text-muted">
               {user.groupIds.length ? `Solo ve ${user.groupIds.length} ${user.groupIds.length === 1 ? 'grupo' : 'grupos'}.` : 'Ve todos los grupos.'} Sin selección = ve todos.
             </p>
 
@@ -226,8 +233,9 @@ export function UsersPage() {
             </div>
           </div>
 
+          {canEdit && (
           <div className="flex items-center gap-2 border-t border-line bg-surface-alt px-4 py-2.5">
-            <p className="flex-1 text-[11px] text-muted">Cambios quedan en bitácora de auditoría</p>
+            <p className="flex-1 text-[13px] text-muted">Cambios quedan en bitácora de auditoría</p>
             <Button onClick={() => setConfirmToggle(true)} disabled={user.id === 'u-aru'} title={user.id === 'u-aru' ? 'No puedes desactivar tu propio usuario' : undefined}>
               {saved.active ? 'Desactivar usuario' : 'Reactivar usuario'}
             </Button>
@@ -238,8 +246,21 @@ export function UsersPage() {
               Guardar permisos
             </Button>
           </div>
+          )}
         </div>
       </div>
+
+      {adding && (
+        <AddUserModal
+          onClose={() => setAdding(false)}
+          onSave={(u) => {
+            addUser(u);
+            setSelectedId(u.id);
+            setAdding(false);
+            toast.success('Usuario agregado', { description: `${u.name} · se le envió la invitación a ${u.email}` });
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmToggle}
@@ -255,5 +276,71 @@ export function UsersPage() {
         }}
       />
     </div>
+  );
+}
+
+function AddUserModal({ onClose, onSave }: { onClose: () => void; onSave: (u: User) => void }) {
+  const users = useStore((s) => s.users);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<RoleKey>('monitor');
+  const [tried, setTried] = useState(false);
+  const cleanEmail = email.trim().toLowerCase();
+  const errors = {
+    name: !name.trim() ? 'Escribe el nombre completo' : null,
+    email: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)
+      ? 'Escribe un correo válido'
+      : users.some((u) => u.email === cleanEmail)
+        ? 'Ya hay un usuario con ese correo'
+        : null,
+  };
+  const save = () => {
+    setTried(true);
+    if (errors.name || errors.email) return;
+    const words = name.trim().split(/\s+/);
+    onSave({
+      id: `u-${crypto.randomUUID().slice(0, 6)}`,
+      name: name.trim(),
+      initials: (words[0][0] + (words[words.length - 1][0] ?? '')).toUpperCase(),
+      email: cleanEmail,
+      title: ROLES[role].label,
+      baseRole: role,
+      permissions: structuredClone(ROLES[role].permissions),
+      groupIds: [],
+      scopeLabel: 'Todo',
+      lastAccessAt: null,
+      active: true,
+      notifications: { criticalWhatsapp: role !== 'account_exec', highInApp: true, dailyEmail: false },
+    });
+  };
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Agregar usuario de la torre"
+      subtitle="Recibe una invitación por correo. Sus permisos parten del rol base y los puedes ajustar después."
+      width={520}
+      footer={
+        <>
+          <div className="flex-1" />
+          <Button onClick={onClose}>Cancelar</Button>
+          <Button variant="primary" onClick={save}>
+            Agregar usuario
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3.5">
+        <Field label="Nombre completo" required error={tried ? errors.name : undefined}>
+          <Input autoFocus value={name} invalid={tried && Boolean(errors.name)} onChange={(e) => setName(e.target.value)} placeholder="Nombre y apellidos" />
+        </Field>
+        <Field label="Correo" required error={tried ? errors.email : undefined}>
+          <Input type="email" value={email} invalid={tried && Boolean(errors.email)} onChange={(e) => setEmail(e.target.value)} placeholder="nombre@empresa.mx" />
+        </Field>
+        <Field label="Rol base" required>
+          <Select value={role} onChange={(e) => setRole(e.target.value as RoleKey)} options={(Object.keys(ROLES) as RoleKey[]).map((k) => ({ value: k, label: ROLES[k].label }))} />
+        </Field>
+      </div>
+    </Modal>
   );
 }

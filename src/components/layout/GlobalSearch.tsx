@@ -83,7 +83,7 @@ export function GlobalSearch() {
 
   return (
     <div ref={boxRef} className="relative w-[300px] shrink">
-      <div className="flex h-[30px] items-center gap-2 rounded-[4px] bg-white/10 px-2.5 focus-within:bg-white/15">
+      <div className="flex h-[34px] items-center gap-2 rounded-[4px] bg-white/10 px-2.5 focus-within:bg-white/15">
         <Search size={14} className="shrink-0 opacity-50" />
         <input
           ref={inputRef}
@@ -106,14 +106,14 @@ export function GlobalSearch() {
           }}
           placeholder="Buscar viaje, tracto, contenedor, operador…"
           aria-label="Buscar viaje, tracto, contenedor u operador"
-          className="min-w-0 flex-1 bg-transparent text-[11px] text-white placeholder:text-white/60 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-[13px] text-white placeholder:text-white/60 focus:outline-none"
         />
-        <kbd className="hidden rounded border border-white/20 px-1 font-mono text-[9px] text-white/50 xl:inline">/</kbd>
+        <kbd className="hidden rounded border border-white/20 px-1 font-mono text-[11px] text-white/50 xl:inline">/</kbd>
       </div>
       {showPanel && (
         <div className="absolute top-[36px] right-0 z-50 w-[380px] rounded-[5px] border border-line bg-white p-1.5 text-ink shadow-pop">
           {results.length === 0 ? (
-            <p className="px-2.5 py-3 text-[11px] text-muted">Sin resultados entre los viajes activos.</p>
+            <p className="px-2.5 py-3 text-[13px] text-muted">Sin resultados entre los viajes activos.</p>
           ) : (
             results.map((r, i) => {
               const meta = KIND_META[r.kind];
@@ -131,10 +131,10 @@ export function GlobalSearch() {
                 >
                   <Icon size={14} className="shrink-0 text-faint" />
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate font-mono text-[11px] font-bold text-ink">{r.primary}</span>
-                    <span className="truncate text-[10px] text-muted">{r.secondary}</span>
+                    <span className="truncate font-mono text-[13px] font-bold text-ink">{r.primary}</span>
+                    <span className="truncate text-[12px] text-muted">{r.secondary}</span>
                   </span>
-                  <span className="text-[9px] tracking-[0.5px] text-faint uppercase">{meta.label}</span>
+                  <span className="text-[11px] tracking-[0.5px] text-faint uppercase">{meta.label}</span>
                 </button>
               );
             })

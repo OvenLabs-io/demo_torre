@@ -15,27 +15,27 @@ npm test           # pruebas (validación ISO 6346)
 
 | Ruta | Pantalla |
 |---|---|
-| `/` | Torre de control — Lista (entrada) |
-| `/mapa` | Torre de control — Mapa |
-| `?viaje=SRV-2603-0186` (`&tab=historial`) | Modal de viaje, sobre cualquier página |
-| `/viajes/nuevo` | Nuevo viaje |
-| `/historial` | Historial de viajes |
+| `/` · `/mapa` · `/torre/grupos` | Torre de control: pestañas Lista, Mapa y Grupos de viaje (entrada) |
+| `?viaje=SRV-2603-0186` (`&tab=info` / `&tab=historial`) | Modal de viaje: Bitácora, Información del viaje, Historial del viaje |
+| `/viajes/nuevo` | Nuevo viaje (formulario simplificado) |
+| `/historial` | Historial de viajes (clic en una fila abre el detalle) |
 | `/alertas` | Bandeja de alertas y protocolo |
+| `/flota/unidades` · `/flota/remolques` | Flota: tractos y remolques/chasis |
+| `/usuarios` (`?tab=operadores` / `?tab=custodios`) | Usuarios de la torre (permisos), operadores y custodios |
+| `/geocercas` | Geocercas (dibujar y sincronizar) |
+| `/georutas` | Georutas: rutas personalizadas (salida, paradas, destino y corredor) |
 | `/admin/reglas` · `?tab=protocolos` | Reglas de alertas · Protocolos de atención |
-| `/admin/usuarios` | Usuarios y permisos |
-| `/flota/unidades` · `/flota/operadores` | Unidades · Operadores y custodios |
-| `/catalogos/geocercas` | Geocercas (dibujar y sincronizar) |
 | `/consola` | Consola super-admin OvenLabs (menú de usuario → "Cambiar a consola OvenLabs") |
 
-Las opciones del menú sin diseño (Mis grupos, Contenedores y días libres, Plantillas, Remolques, Candados, Terminales, Navieras, Rutas frecuentes, Integraciones, Mi empresa y las demás pestañas de la consola) muestran una pantalla "Próximamente".
+El menú solo muestra lo que existe y lo que el usuario tiene permitido (Usuarios → permisos por módulo). Las URLs anteriores (`/admin/usuarios`, `/flota/operadores`, `/catalogos/geocercas`) redirigen a las nuevas.
 
 ## Guion rápido de demo
 
-1. **Torre — Lista:** el contador "actualizado hace X s" y las velocidades cambian cada 5 s. Clic en **SRV-2603-0186** → bitácora con fotos, información editable y pestaña **Historial del viaje** con reproducción.
+1. **Torre — Lista:** el contador "actualizado hace X s" y las velocidades cambian cada 5 s. Clic en **SRV-2603-0186** → pestañas **Bitácora** (evento con evidencias, "Descargar bitácora" en PDF), **Información del viaje** y **Historial del viaje** con reproducción.
 2. **Torre — Mapa:** unidades sobre carreteras reales; capas de geocercas, tráfico, recorrido y zonas de riesgo; clic en una tarjeta centra la unidad.
 3. **Alertas:** atender la "Detención no autorizada" (marcar paso, registrar acción, cerrar con motivo) → el badge del menú baja.
-4. **Viajes → Nuevo viaje:** "Usar plantilla de ruta", capturar el contenedor `MSKU7731406` (falla el dígito de control) y corregir a `MSKU7731403`; al crear, el viaje aparece en la torre.
-5. **Catálogos → Geocercas:** "Nueva geocerca", dibujar un polígono, guardar → "Pendiente de enviar" → sincronizada a los 2 s.
+4. **Nuevo viaje:** "Crear viaje" con el formulario vacío marca lo que falta; elegir unidad, operador, "Usar georuta", horas de inicio y entrega (y una parada intermedia); al crear, el viaje aparece en la torre.
+5. **Geocercas:** "Nueva geocerca", dibujar un polígono, guardar → "Pendiente de enviar" → sincronizada a los 2 s.
 6. **Menú de usuario → Cambiar a consola OvenLabs.**
 
 ## Cambiar la marca

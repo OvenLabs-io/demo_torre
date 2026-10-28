@@ -6,11 +6,10 @@ export const MODULES: { key: Module; label: string }[] = [
   { key: 'trips', label: 'Viajes' },
   { key: 'history', label: 'Historial' },
   { key: 'alerts', label: 'Alertas' },
-  { key: 'fleet', label: 'Flota (unidades, operadores)' },
-  { key: 'catalogs', label: 'Catálogos (geocercas, terminales)' },
-  { key: 'rules', label: 'Reglas de alertas' },
-  { key: 'users', label: 'Usuarios y permisos' },
-  { key: 'integrations', label: 'Integraciones' },
+  { key: 'fleet', label: 'Flota (unidades, remolques)' },
+  { key: 'catalogs', label: 'Geocercas y georutas' },
+  { key: 'rules', label: 'Reglas y protocolos de alertas' },
+  { key: 'users', label: 'Usuarios, operadores y custodios' },
 ];
 
 export const ACTIONS: { key: Action; label: string }[] = [
@@ -49,7 +48,6 @@ export const ROLES: Record<RoleKey, { label: string; permissions: PermissionMatr
       catalogs: 'vcedx',
       rules: 'vcedx',
       users: 'vcedx',
-      integrations: 'vcedx',
     }),
   },
   traffic_manager: {
@@ -62,8 +60,7 @@ export const ROLES: Record<RoleKey, { label: string; permissions: PermissionMatr
       fleet: 'vcex',
       catalogs: 'vcex',
       rules: 'vce',
-      users: 'v',
-      integrations: 'v',
+      users: 'vce',
     }),
   },
   monitor: {

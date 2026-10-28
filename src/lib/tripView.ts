@@ -59,12 +59,14 @@ export function legText(trip: Trip): string {
   return `${trip.currentLeg}/${trip.legs.length} ${leg?.label ?? ''}`;
 }
 
-/** "IMP", "EXP·FULL" */
+/** "IMP", "EXP·FULL" ('' for trips without a movement type). */
 export function movementTag(trip: Trip, sep = '·'): string {
+  if (!trip.movement) return '';
   return trip.modality === 'full' ? `${trip.movement}${sep}FULL` : trip.movement;
 }
 
 export function movementLong(trip: Trip): string {
+  if (!trip.movement) return '';
   return trip.movement === 'IMP' ? 'IMPORTACIÓN' : trip.movement === 'EXP' ? 'EXPORTACIÓN' : 'REPARTO LOCAL';
 }
 

@@ -48,7 +48,7 @@ export function EditUnitModal({ unit, onClose }: { unit: Unit; onClose: () => vo
       subtitle="Los demás datos vienen del proveedor GPS y no se editan aquí"
       footer={
         <>
-          <span className="flex-1 text-[10px] text-crit">{error}</span>
+          <span className="flex-1 text-[12px] text-crit">{error}</span>
           <Button onClick={onClose}>Cancelar</Button>
           <Button variant="primary" onClick={save}>
             Guardar cambios
@@ -85,7 +85,7 @@ export function EditUnitModal({ unit, onClose }: { unit: Unit; onClose: () => vo
             <ReadOnly label="VIN" value={unit.vin} mono />
             <ReadOnly label="Última señal" value={lastSignal} />
           </div>
-          <p className="mt-2.5 text-[10px] text-muted">Para corregir estos datos hay que hacerlo en la plataforma GPS; se reflejan en la siguiente sincronización.</p>
+          <p className="mt-2.5 text-[12px] text-muted">Para corregir estos datos hay que hacerlo en la plataforma GPS; se reflejan en la siguiente sincronización.</p>
         </div>
 
         <Field label="Notas internas">

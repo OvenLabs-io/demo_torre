@@ -35,8 +35,8 @@ export function Toggle({ checked, onChange, label, description, disabled, color 
       </button>
       {(label || description) && (
         <span className="flex flex-col leading-tight">
-          {label && <span className="text-[12px] font-medium text-ink">{label}</span>}
-          {description && <span className="text-[10px] text-muted">{description}</span>}
+          {label && <span className="text-[14px] font-medium text-ink">{label}</span>}
+          {description && <span className="text-[12px] text-muted">{description}</span>}
         </span>
       )}
     </label>

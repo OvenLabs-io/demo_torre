@@ -3,255 +3,194 @@ import { Link, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import L, { type Map as LeafletMap } from 'leaflet';
 import { Marker, Polyline } from 'react-leaflet';
-import { AlertTriangle, Check, ChevronDown, Clock3, Crosshair, GripVertical, Plus, X } from 'lucide-react';
+import { AlertTriangle, ArrowDown, Check, ChevronDown, MapPin, Plus, Route, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { LegKind } from '@/types/domain';
+import type { CrewMember } from '@/types/domain';
 import { useCurrentUser, useStore } from '@/store/useStore';
-import { daysUntil, fmtDate, fmtDuration, fmtNumber, fmtTime } from '@/lib/format';
-import { shippingLineFor, validateContainer } from '@/lib/iso6346';
+import { fmtDate, fmtDuration, fmtNumber, fmtTime } from '@/lib/format';
+import { dayEnd } from '@/lib/mockTime';
 import {
-  applicableRules,
   buildTrip,
-  CARGO_TYPES,
+  CARRIERS,
   centerOf,
-  containerError,
   emptyForm,
-  estimateLegs,
-  LEG_KINDS,
-  newLeg,
+  estimateRoute,
+  findDriver,
+  MAX_TRAILERS,
+  newStop,
   nextTripId,
   parseLocal,
-  riskCrossings,
-  SHIPPING_LINES,
+  phoneDigits,
+  routeStops,
+  segmentEstimate,
   validate,
-  windowText,
   type Check as CheckItem,
   type NewTripForm,
 } from '@/lib/newTrip';
-import { TRIP_GROUPS, CHASSIS } from '@/mocks/clients';
 import { crewName } from '@/mocks/crew';
-import { legLabel } from '@/mocks/trips';
-import { LOCKS, ROUTE_TEMPLATES } from '@/mocks/routeTemplates';
+import { trailerLabel, trailersInUse } from '@/mocks/trailers';
 import { BaseMap } from '@/components/map/BaseMap';
-import { RiskZonesLayer } from '@/components/map/layers';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Field, Input, Select } from '@/components/ui/Field';
-import { Segmented } from '@/components/ui/Tabs';
-import { Toggle } from '@/components/ui/Toggle';
 import { Popover } from '@/components/ui/Popover';
-import { InfoBanner } from '@/components/ui/InfoBanner';
 
-const LEG_GRID = 'grid grid-cols-[28px_1fr_1.3fr_1fr_170px_44px] items-center gap-x-3';
+/** Validation field key → DOM id (to jump to it from the checklist). */
+const fieldId = (key: string) => `nt-${key}`;
 
-const KIND_BY_MOVEMENT: Record<'IMP' | 'EXP', LegKind[]> = {
-  IMP: ['terminal_pickup', 'client_delivery', 'empty_return'],
-  EXP: ['empty_pickup', 'client_loading', 'terminal_delivery'],
-};
+function focusField(key: string) {
+  const el = document.getElementById(fieldId(key));
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const target = el.matches('input, select') ? el : el.querySelector<HTMLElement>('select, input');
+  target?.focus({ preventScroll: true });
+}
+
+const fmtPhone = (digits: string) => `+52 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
 
 export function NewTripPage() {
   const navigate = useNavigate();
-  const { trips, history, units, crew, clients, geofences, rules, tripDraft, saveTripDraft, createTrip, lastTickAt } = useStore();
+  const { trips, history, units, crew, geofences, georoutes, trailers, tripGroups, tripDraft, saveTripDraft, createTrip, upsertCrew, lastTickAt } = useStore();
   const user = useCurrentUser();
   const [f, setF] = useState<NewTripForm>(() => (tripDraft?.data as NewTripForm | undefined) ?? emptyForm());
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const folio = useMemo(() => nextTripId([...trips, ...history].map((t) => t.id)), [trips, history]);
+  const [showAll, setShowAll] = useState(false);
+  const usedIds = useMemo(() => [...trips, ...history].map((t) => t.id), [trips, history]);
+  const autoFolio = useMemo(() => nextTripId(usedIds), [usedIds]);
   const now = Math.max(Date.now(), lastTickAt);
 
   const set = <K extends keyof NewTripForm>(k: K, v: NewTripForm[K]) => setF((x) => ({ ...x, [k]: v }));
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
 
-  const estimates = useMemo(() => estimateLegs(f.legs, geofences), [f.legs, geofences]);
-  const crossings = useMemo(() => riskCrossings(estimates), [estimates]);
-  const checks = validate(f, { units, crew, now });
+  const inUse = useMemo(() => trailersInUse(trips), [trips]);
+  const checks = validate(f, { units, crew, geofences, usedIds, trailersInUse: inUse, now });
   const errors = checks.filter((c) => c.level === 'error');
   const warnings = checks.filter((c) => c.level === 'warn');
-  const ruleChips = applicableRules(f, crossings.length > 0, rules);
-  const client = clients.find((c) => c.id === f.clientId);
-  const pickup = parseLocal(f.pickupAt);
-  const freeEnd = f.freeDaysEnd ? new Date(`${f.freeDaysEnd}T23:59`).getTime() : null;
-  const freeDays = freeEnd ? daysUntil(freeEnd, now) : null;
+  /** Inline error for a field once the user left it, or after trying to create. */
+  const errorFor = (key: string) => (showAll || touched[key] ? errors.find((c) => c.field === key)?.text : undefined);
+
+  const stops = routeStops(f);
+  const stopsKey = stops.join('|');
+  const estimates = useMemo(() => estimateRoute(stopsKey ? stopsKey.split('|') : [], geofences), [stopsKey, geofences]);
+  const totalMin = estimates.reduce((s, e) => s + e.minutes, 0);
+  const totalKm = estimates.reduce((s, e) => s + e.km, 0);
+  const georoute = georoutes.find((g) => g.id === f.georouteId);
+  const georouteIntact = georoute && georoute.stops.join('|') === stopsKey;
+  const knownDriver = findDriver(f.driverName, crew);
+  const arrivalTs = parseLocal(f.arrivalAt);
 
   /* ---------- Handlers ---------- */
 
-  const setClient = (id: string) =>
+  const setDriverName = (name: string) =>
     setF((x) => {
-      const prev = clients.find((c) => c.id === x.clientId);
-      const next = clients.find((c) => c.id === id);
-      const keepContacts = x.contacts.length && JSON.stringify(x.contacts) !== JSON.stringify(prev?.contacts ?? []);
-      return { ...x, clientId: id, contacts: keepContacts ? x.contacts : next?.contacts ?? [] };
+      const prev = findDriver(x.driverName, crew);
+      const next = findDriver(name, crew);
+      // Known operator → fill their phone, unless the user typed a different one.
+      const autoPhone = !x.driverPhone || (prev !== undefined && phoneDigits(prev.phone) === phoneDigits(x.driverPhone));
+      const driverPhone = !autoPhone ? x.driverPhone : next ? next.phone : prev ? '' : x.driverPhone;
+      return { ...x, driverName: name, driverPhone };
     });
 
-  const setContainer = (i: number, patch: Partial<NewTripForm['containers'][number]>) =>
-    setF((x) => {
-      const containers = x.containers.map((c, j) => (j === i ? { ...c, ...patch } : c));
-      let shippingLine = x.shippingLine;
-      if (i === 0 && patch.number !== undefined) {
-        const line = shippingLineFor(patch.number);
-        const prevAuto = shippingLineFor(x.containers[0].number);
-        if (SHIPPING_LINES.includes(line) && (!x.shippingLine || x.shippingLine === prevAuto)) shippingLine = line;
-      }
-      return { ...x, containers, shippingLine };
-    });
-
-  const setModality = (m: NewTripForm['modality']) =>
+  const applyGeoroute = (id: string) => {
+    const g = georoutes.find((x) => x.id === id)!;
     setF((x) => ({
       ...x,
-      modality: m,
-      containers: m === 'full' ? [x.containers[0], x.containers[1] ?? { number: '', isoType: x.containers[0].isoType, seal: '' }] : [x.containers[0]],
+      georouteId: id,
+      departureId: g.stops[0],
+      arrivalId: g.stops[g.stops.length - 1],
+      stops: g.stops.slice(1, -1).map((geofenceId, i) => ({ ...newStop(), geofenceId, at: x.stops[i]?.at ?? '' })),
     }));
-
-  const setMovement = (mv: NewTripForm['movement']) =>
-    setF((x) => {
-      const kinds = mv === 'LOC' ? null : KIND_BY_MOVEMENT[mv];
-      return { ...x, movement: mv, legs: kinds ? x.legs.map((l, i) => ({ ...l, kind: kinds[i] ?? l.kind })) : x.legs };
-    });
-
-  const applyTemplate = (id: string) => {
-    const tpl = ROUTE_TEMPLATES.find((t) => t.id === id)!;
-    setF((x) => {
-      const p = parseLocal(x.pickupAt);
-      const end = x.freeDaysEnd ? new Date(`${x.freeDaysEnd}T23:59`).getTime() : null;
-      const legs = tpl.legs.map((l, i) => ({
-        id: crypto.randomUUID(),
-        kind: l.kind,
-        geofenceId: l.geofenceId,
-        window: i === 0 ? (p ? windowText(p) : '') : l.window ? `${p ? `${fmtDate(p)} · ` : ''}${l.window}` : end ? `Antes del ${fmtDate(end)}` : '',
-      }));
-      const terminal = geofences.find((g) => g.id === tpl.legs[0].geofenceId && g.type === 'terminal');
-      return { ...x, movement: tpl.movement, legs, terminalId: terminal ? terminal.id : x.terminalId };
-    });
-    toast.success('Plantilla aplicada', { description: tpl.name });
+    toast.success('Georuta aplicada', { description: `${g.name} · solo faltan las horas.` });
   };
 
-  /** The first leg's appointment follows the terminal pickup unless edited by hand. */
-  const setPickup = (value: string) =>
-    setF((x) => {
-      const prev = parseLocal(x.pickupAt);
-      const next = parseLocal(value);
-      const autoFirst = !x.legs[0]?.window || (prev !== null && x.legs[0].window === windowText(prev));
-      const legs = autoFirst && next !== null ? x.legs.map((l, i) => (i === 0 ? { ...l, window: windowText(next) } : l)) : x.legs;
-      return { ...x, pickupAt: value, legs };
-    });
-
-  const setLeg = (i: number, patch: Partial<NewTripForm['legs'][number]>) => set('legs', f.legs.map((l, j) => (j === i ? { ...l, ...patch } : l)));
-
-  const toggleEscort = (v: boolean) =>
-    setF((x) => ({ ...x, escortRequired: v, escortLegs: v && crossings[0] ? String(crossings[0].legIndex + 1) : x.escortLegs }));
+  const setStop = (i: number, patch: Partial<NewTripForm['stops'][number]>) => set('stops', f.stops.map((s, j) => (j === i ? { ...s, ...patch } : s)));
 
   const saveDraft = () => {
     saveTripDraft(f);
-    toast.success('Borrador guardado', { description: 'Lo encuentras al volver a Viajes → Nuevo viaje.' });
+    toast.success('Borrador guardado', { description: 'Lo encuentras al volver a Nuevo viaje.' });
   };
 
   const create = () => {
-    if (errors.length) return;
+    if (errors.length) {
+      setShowAll(true);
+      const first = errors.find((e) => e.field);
+      if (first?.field) focusField(first.field);
+      toast.error(`Falta resolver ${errors.length} ${errors.length === 1 ? 'dato' : 'datos'}`, { description: errors[0].text });
+      return;
+    }
     const unit = units.find((u) => u.id === f.unitId)!;
-    const escortIsProvider = f.escortId.startsWith('prov:');
-    const trip = buildTrip(f, {
-      id: folio,
-      unit,
-      user,
-      client,
-      estimates,
-      warnings: warnings.map((w) => w.text),
-      ruleIds: ruleChips.map((r) => r.rule.id),
-      escort: escortIsProvider ? undefined : crew.find((c) => c.id === f.escortId),
-      escortProvider: escortIsProvider ? f.escortId.slice(5) : undefined,
-    });
+    const id = f.folio.trim().toUpperCase() || autoFolio;
+    const digits = phoneDigits(f.driverPhone);
+    let driver = knownDriver;
+    if (!driver) {
+      const words = f.driverName.trim().split(/\s+/);
+      driver = {
+        id: `op-${crypto.randomUUID().slice(0, 6)}`,
+        role: 'driver',
+        firstName: words[0],
+        lastName: words.slice(1).join(' '),
+        phone: digits ? fmtPhone(digits) : '',
+        // The license is captured later in Usuarios → Operadores; flagged as "por vencer" so it isn't forgotten.
+        license: { kind: 'Federal E', number: 'Por capturar', expiresOn: dayEnd(7) },
+        provider: f.carrier.trim(),
+        status: 'available',
+      } satisfies CrewMember;
+      upsertCrew(driver);
+    } else if (digits && digits !== phoneDigits(driver.phone)) {
+      upsertCrew({ ...driver, phone: fmtPhone(digits) });
+    }
+    const trip = buildTrip(f, { id, unit, driverId: driver.id, user, geofences, warnings: warnings.map((w) => w.text) });
     createTrip(trip);
     navigate(`/?viaje=${trip.id}`);
-    toast.success(`Viaje ${trip.id} creado`, { description: 'Ya aparece en la Torre de control. El monitoreo inicia cuando el tracto sale del origen.' });
+    toast.success(`Viaje ${trip.id} creado`, {
+      description: knownDriver
+        ? 'Ya aparece en la Torre de control. El monitoreo inicia cuando la unidad sale.'
+        : `Ya aparece en la Torre de control. ${crewName(driver)} se agregó en Usuarios → Operadores: completa su licencia ahí.`,
+    });
   };
 
   /* ---------- Option lists ---------- */
 
-  const drivers = crew.filter((c) => c.role === 'driver');
-  const escorts = crew.filter((c) => c.role === 'escort');
   const tractors = units.filter((u) => u.economic);
-  const usedChassis = new Set(trips.map((t) => t.chassis));
-  const terminals = geofences.filter((g) => g.type === 'terminal');
-  const driver = drivers.find((d) => d.id === f.driverId);
   const unit = tractors.find((u) => u.id === f.unitId);
-  const lock = LOCKS.find((l) => l.id === f.lockId);
-
-  const driverHelp = (() => {
-    if (!driver) return null;
-    const lic = daysUntil(driver.license.expiresOn, now);
-    if (driver.status !== 'available') return { error: true, text: `En viaje ${driver.assignment?.tripId ?? ''}` };
-    if (lic < 0) return { error: true, text: 'Licencia vencida' };
-    return { error: false, text: `Licencia ${driver.license.kind.toLowerCase()} vigente · sin viaje activo` };
-  })();
-  const unitHelp = (() => {
-    if (!unit) return null;
-    if (unit.status === 'maintenance') return { error: true, text: 'En taller · no disponible' };
-    if (unit.status === 'on_trip') return { error: true, text: `En viaje ${unit.currentTripId}` };
-    if (unit.gps.signal === 'offline') return { error: true, text: 'Sin señal GPS' };
-    return { error: false, text: `GPS en línea · en patio ${unit.base}` };
-  })();
-
-  const total = estimates.reduce((s, e) => s + e.minutes, 0);
-  const totalKm = estimates.reduce((s, e) => s + (e.km ?? 0), 0);
-  const etaClient = pickup ? pickup + ((estimates[0]?.minutes ?? 0) + (estimates[1]?.minutes ?? 0)) * 60_000 : null;
-
-  // Drag & drop legs (handle only).
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
-  const [handleIdx, setHandleIdx] = useState<number | null>(null);
+  const places = geofences
+    .filter((g) => g.type !== 'avoid_zone')
+    .map((g) => ({ value: g.id, label: `${g.name.split(' · ')[0]} · ${g.locationLabel}` }));
+  const trailerOptions = (current: string) =>
+    trailers.map((t) => {
+      const label = trailerLabel(t);
+      const trip = inUse.get(label);
+      const why = t.status === 'maintenance' ? ' (en taller)' : trip ? ` (en ${trip})` : label !== current && f.trailers.includes(label) ? ' (ya elegido)' : '';
+      return { value: label, label: `${label} · ${t.kind}${why}`, disabled: Boolean(why) };
+    });
+  const drivers = crew.filter((c) => c.role === 'driver');
+  const driverHelp = knownDriver
+    ? 'Operador registrado · celular tomado de Usuarios → Operadores'
+    : f.driverName.trim()
+      ? 'Operador nuevo: se registrará al crear el viaje'
+      : 'Escribe para buscar en Usuarios → Operadores';
 
   return (
     <div className="flex flex-col gap-3.5 px-6 py-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <p className="text-[11px] text-muted">
+          <p className="text-[13px] text-muted">
             <Link to="/" className="hover:underline">
-              Viajes
+              Torre de control
             </Link>{' '}
             / Nuevo viaje
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2.5">
-            <h1 className="text-[18px] font-bold text-ink">Nuevo viaje</h1>
-            <Chip tone="primary" mono>
-              {folio} · folio automático
-            </Chip>
+            <h1 className="text-[20px] font-bold text-ink">Nuevo viaje</h1>
             {tripDraft && <Chip tone="muted">Borrador guardado {fmtTime(tripDraft.savedAt)}</Chip>}
           </div>
-          <p className="mt-1 text-[11px] text-muted">
-            Captura el viaje y sus tramos. Al crearlo aparece en la Torre de control y empieza el monitoreo cuando el tracto sale del origen.
-          </p>
+          <p className="mt-1 text-[13px] text-muted">Solo lo necesario para monitorear el viaje. Los campos con * son obligatorios.</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Popover
-            align="right"
-            panelClassName="w-[420px]"
-            trigger={({ toggle }) => (
-              <Button onClick={toggle}>
-                Usar plantilla de ruta <ChevronDown size={13} />
-              </Button>
-            )}
-          >
-            {(close) => (
-              <div className="flex flex-col">
-                <p className="label-section px-2 pt-1 pb-1.5">Plantillas de ruta</p>
-                {ROUTE_TEMPLATES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      applyTemplate(t.id);
-                      close();
-                    }}
-                    className="rounded-[3px] px-2 py-2 text-left text-[12px] hover:bg-line-soft"
-                  >
-                    {t.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </Popover>
           <Button onClick={() => navigate('/')}>Cancelar</Button>
           <Button onClick={saveDraft}>Guardar borrador</Button>
-          <Button variant="primary" disabled={errors.length > 0} onClick={create} title={errors.length ? `Falta resolver ${errors.length} ${errors.length === 1 ? 'punto' : 'puntos'}` : 'Crear el viaje'}>
+          <Button variant="primary" onClick={create}>
             Crear viaje
           </Button>
         </div>
@@ -260,341 +199,399 @@ export function NewTripPage() {
       <div className="flex items-start gap-3.5">
         {/* Form */}
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
-          <Card n={1} title="Datos generales" subtitle="Tipo de movimiento, cliente y referencias de la naviera">
-            <div className="mb-3.5 flex items-start gap-4">
-              <Field label="Tipo de movimiento" className="shrink-0">
-                <Segmented
-                  tone="light"
-                  value={f.movement}
-                  onChange={setMovement}
-                  items={[
-                    { key: 'IMP', label: 'Importación' },
-                    { key: 'EXP', label: 'Exportación' },
-                    { key: 'LOC', label: 'Reparto local' },
-                  ]}
+          <Card n={1} title="Datos generales del viaje">
+            <div className="grid grid-cols-3 gap-x-4 gap-y-4">
+              <Field label="Folio" help={!f.folio.trim() ? `Vacío = folio automático ${autoFolio}` : undefined} error={errorFor('folio')}>
+                <Input
+                  id={fieldId('folio')}
+                  mono
+                  value={f.folio}
+                  invalid={Boolean(errorFor('folio'))}
+                  onBlur={() => touch('folio')}
+                  onChange={(e) => set('folio', e.target.value.toUpperCase())}
+                  placeholder={autoFolio}
                 />
               </Field>
-              <Field label="Modalidad" className="shrink-0">
-                <Segmented
-                  tone="light"
-                  value={f.modality}
-                  onChange={setModality}
-                  items={[
-                    { key: 'single', label: 'Sencillo' },
-                    { key: 'full', label: 'Full (2 contenedores)' },
-                  ]}
-                />
-              </Field>
-              <Field label="Cliente" required className="min-w-0 flex-1" error={touched.client && !f.clientId ? 'Requerido' : undefined}>
+              <Field
+                label="Unidad"
+                required
+                error={errorFor('unit')}
+                help={unit && unit.status === 'available' ? `${unit.plate} · ${unit.model} · base ${unit.base}` : undefined}
+              >
                 <Select
-                  value={f.clientId}
-                  placeholder="Selecciona el cliente"
-                  required
-                  invalid={touched.client && !f.clientId}
-                  onBlur={() => touch('client')}
-                  onChange={(e) => setClient(e.target.value)}
-                  options={clients.map((c) => ({ value: c.id, label: c.name }))}
+                  id={fieldId('unit')}
+                  mono
+                  value={f.unitId}
+                  placeholder="Selecciona la unidad"
+                  invalid={Boolean(errorFor('unit'))}
+                  onBlur={() => touch('unit')}
+                  onChange={(e) => {
+                    set('unitId', e.target.value);
+                    touch('unit');
+                  }}
+                  options={tractors.map((u) => {
+                    const why =
+                      u.status === 'maintenance' ? ' (en taller)' : u.status === 'on_trip' ? ` (en ${u.currentTripId})` : u.gps.signal === 'offline' ? ' (sin señal GPS)' : '';
+                    return { value: u.id, label: `${u.economic} · ${u.plate}${why}`, disabled: Boolean(why) };
+                  })}
                 />
               </Field>
-            </div>
-            <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
-              <Field label="BL / Booking" required error={touched.booking && !f.booking.trim() ? 'Requerido' : undefined}>
-                <Input mono value={f.booking} invalid={touched.booking && !f.booking.trim()} onBlur={() => touch('booking')} onChange={(e) => set('booking', e.target.value.toUpperCase())} placeholder="MEDUMX0000000" />
+              <Field label="Grupo de viaje">
+                <Select mono value={f.groupId} onChange={(e) => set('groupId', e.target.value)} options={[{ value: '', label: 'Sin grupo' }, ...tripGroups.map((g) => ({ value: g, label: g }))]} />
               </Field>
-              <Field label="Referencia del cliente">
-                <Input value={f.clientRef} onChange={(e) => set('clientRef', e.target.value)} placeholder="OC-00000" />
+
+              <Field label={`Remolques (hasta ${MAX_TRAILERS})`} className="col-span-3" error={errorFor('trailers')}>
+                <div id={fieldId('trailers')} className="flex flex-wrap items-center gap-2">
+                  {f.trailers.map((t, i) => (
+                    <div key={i} className="flex w-[320px] items-center gap-1.5">
+                      <Select
+                        mono
+                        className="flex-1"
+                        value={t}
+                        placeholder={i === 0 ? 'Sin remolque' : 'Elige el segundo remolque'}
+                        onChange={(e) => {
+                          set('trailers', f.trailers.map((x, j) => (j === i ? e.target.value : x)));
+                          touch('trailers');
+                        }}
+                        options={trailerOptions(t)}
+                      />
+                      {(i > 0 || t) && (
+                        <button
+                          type="button"
+                          aria-label="Quitar remolque"
+                          onClick={() => set('trailers', f.trailers.length > 1 ? f.trailers.filter((_, j) => j !== i) : [''])}
+                          className="text-faint hover:text-crit"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {f.trailers.length < MAX_TRAILERS && f.trailers[0] && (
+                    <Button icon={<Plus size={15} />} onClick={() => set('trailers', [...f.trailers, ''])}>
+                      Agregar segundo remolque
+                    </Button>
+                  )}
+                </div>
               </Field>
-              <Field label="Grupo de viaje" extra={<Chip tone="muted" className="text-[9px]">opcional</Chip>}>
-                <Select mono value={f.groupId} onChange={(e) => set('groupId', e.target.value)} options={[{ value: '', label: 'Sin grupo' }, ...TRIP_GROUPS.map((g) => ({ value: g, label: g }))]} />
+
+              <Field label="Línea transportista" required error={errorFor('carrier')}>
+                <Input
+                  id={fieldId('carrier')}
+                  list="nt-carriers"
+                  value={f.carrier}
+                  invalid={Boolean(errorFor('carrier'))}
+                  onBlur={() => touch('carrier')}
+                  onChange={(e) => set('carrier', e.target.value)}
+                  placeholder="Escribe o elige"
+                />
+                <datalist id="nt-carriers">
+                  {CARRIERS.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </Field>
-              <Field label="Cita de retiro en terminal" required error={touched.pickup && !f.pickupAt ? 'Requerido' : undefined}>
-                <Input type="datetime-local" value={f.pickupAt} invalid={touched.pickup && !f.pickupAt} onBlur={() => touch('pickup')} onChange={(e) => setPickup(e.target.value)} />
+              <Field label="Nombre de operador" required error={errorFor('driver')} help={driverHelp}>
+                <Input
+                  id={fieldId('driver')}
+                  list="nt-drivers"
+                  value={f.driverName}
+                  invalid={Boolean(errorFor('driver'))}
+                  onBlur={() => touch('driver')}
+                  onChange={(e) => setDriverName(e.target.value)}
+                  placeholder="Nombre y apellidos"
+                  autoComplete="off"
+                />
+                <datalist id="nt-drivers">
+                  {drivers.map((d) => (
+                    <option key={d.id} value={crewName(d)}>
+                      {d.status !== 'available' ? `En viaje ${d.assignment?.tripId ?? ''}` : 'Disponible'}
+                    </option>
+                  ))}
+                </datalist>
+              </Field>
+              <Field label="Celular" error={errorFor('phone')} help="10 dígitos · la torre lo usa para llamarle">
+                <Input
+                  id={fieldId('phone')}
+                  type="tel"
+                  mono
+                  value={f.driverPhone}
+                  invalid={Boolean(errorFor('phone'))}
+                  onBlur={() => touch('phone')}
+                  onChange={(e) => set('driverPhone', e.target.value.replace(/[^\d+\s-]/g, ''))}
+                  placeholder="312 000 0000"
+                />
               </Field>
             </div>
           </Card>
 
-          <Card
-            n={2}
-            title="Contenedor"
-            subtitle="Se valida el dígito de control ISO 6346"
-            right={
-              freeDays !== null && (
-                <Chip tone={freeDays < 0 ? 'crit' : freeDays <= 2 ? 'warn' : 'ok'}>
-                  {freeDays < 0 ? `Días libres: demora ${-freeDays} d` : `Días libres: ${freeDays} restantes`}
-                </Chip>
-              )
-            }
-          >
-            <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
-              {f.containers.map((c, i) => {
-                const v = c.number.trim() ? validateContainer(c.number) : null;
-                const err = containerError(c);
-                const sealErr = (touched[`seal${i}`] || (v?.ok ?? false)) && !c.seal.trim();
-                const suffix = f.containers.length > 1 ? ` ${i + 1}` : '';
-                return (
-                  <ContainerRow key={i}>
-                    <Field
-                      label={`Número de contenedor${suffix}`}
-                      required
-                      error={err ?? undefined}
-                      help={v?.ok ? `Dígito de control válido · ${shippingLineFor(c.number)}` : 'Ej. MSKU7731403'}
-                    >
-                      <Input
-                        mono
-                        value={c.number}
-                        maxLength={11}
-                        invalid={Boolean(err)}
-                        valid={v?.ok}
-                        trailing={v?.ok ? <Check size={14} className="text-ok-text" /> : undefined}
-                        onChange={(e) => setContainer(i, { number: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
-                        placeholder="MSKU0000000"
-                      />
-                    </Field>
-                    <Field label="Tipo" required>
-                      <Select value={c.isoType} onChange={(e) => setContainer(i, { isoType: e.target.value as '20DC' })} options={['20DC', '40HC', '40RF'].map((t) => ({ value: t, label: t }))} />
-                    </Field>
-                    <Field label={`Sello${suffix}`} required error={sealErr ? 'Requerido para salir de terminal' : undefined}>
-                      <Input mono value={c.seal} invalid={sealErr} onBlur={() => touch(`seal${i}`)} onChange={(e) => setContainer(i, { seal: e.target.value.toUpperCase() })} placeholder="CMX000000" />
-                    </Field>
-                    {i === 0 ? (
-                      <Field label="Peso bruto (kg)">
-                        <Input mono value={f.grossWeightKg} onChange={(e) => set('grossWeightKg', e.target.value.replace(/[^\d]/g, '') ? fmtNumber(Number(e.target.value.replace(/[^\d]/g, ''))) : '')} placeholder="24,800" />
-                      </Field>
-                    ) : (
-                      <div />
-                    )}
-                  </ContainerRow>
-                );
-              })}
-              <Field label="Naviera">
-                <Select value={f.shippingLine} placeholder="Selecciona" onChange={(e) => set('shippingLine', e.target.value)} options={SHIPPING_LINES.map((s) => ({ value: s, label: s }))} />
-              </Field>
-              <Field label="Terminal de retiro">
-                <Select value={f.terminalId} placeholder="Selecciona" onChange={(e) => set('terminalId', e.target.value)} options={terminals.map((t) => ({ value: t.id, label: t.name.split(' · ')[0] }))} />
-              </Field>
-              <Field label="Fin de días libres" help="Se generará alerta R-07 un día antes">
-                <Input type="date" value={f.freeDaysEnd} onChange={(e) => set('freeDaysEnd', e.target.value)} />
-              </Field>
-              <Field label="Carga">
-                <Select value={f.cargo} onChange={(e) => set('cargo', e.target.value)} options={CARGO_TYPES.map((c) => ({ value: c, label: c }))} />
-              </Field>
-            </div>
+          <Card n={2} title="Notas del viaje">
+            <textarea
+              value={f.notes}
+              onChange={(e) => set('notes', e.target.value)}
+              rows={3}
+              placeholder="Indicaciones para el operador o la torre (opcional). Quedan en la bitácora del viaje."
+              aria-label="Notas del viaje"
+              className="w-full resize-y rounded-[4px] border border-input bg-white px-2.5 py-2 text-[14px] text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            />
           </Card>
 
           <Card
             n={3}
-            title="Ruta y tramos"
-            subtitle="Cada tramo usa geocercas de origen y destino; el tramo actual se muestra en la torre"
+            title="Ruta"
             right={
-              <Button icon={<Plus size={14} />} onClick={() => set('legs', [...f.legs, newLeg(f.movement === 'EXP' ? 'terminal_delivery' : 'empty_return')])}>
-                Agregar parada
-              </Button>
+              georoutes.length > 0 && (
+                <Popover
+                  align="right"
+                  panelClassName="w-[460px]"
+                  trigger={({ toggle }) => (
+                    <Button icon={<Route size={15} />} onClick={toggle}>
+                      Usar georuta <ChevronDown size={14} />
+                    </Button>
+                  )}
+                >
+                  {(close) => (
+                    <div className="flex flex-col">
+                      <p className="label-section px-2 pt-1 pb-1.5">Georutas guardadas</p>
+                      {georoutes.map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => {
+                            applyGeoroute(g.id);
+                            close();
+                          }}
+                          className="rounded-[3px] px-2 py-2 text-left text-[14px] hover:bg-line-soft"
+                        >
+                          <span className="font-mono text-[12px] text-muted">{g.id}</span> {g.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </Popover>
+              )
             }
           >
-            <div className="flex flex-col gap-2">
-              <div className={LEG_GRID}>
-                {['#', 'Tramo', 'Geocerca', 'Cita / ventana', 'Tiempo estimado', ''].map((h) => (
-                  <span key={h} className="text-[9px] font-semibold tracking-[0.54px] text-muted uppercase">
-                    {h}
-                  </span>
-                ))}
-              </div>
-              {f.legs.map((l, i) => (
-                <div
-                  key={l.id}
-                  className={clsx(LEG_GRID, 'rounded-[4px]', dragFrom === i && 'bg-primary-soft opacity-60')}
-                  draggable={handleIdx === i}
-                  onDragStart={() => setDragFrom(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => {
-                    if (dragFrom !== null && dragFrom !== i) {
-                      const legs = [...f.legs];
-                      const [m] = legs.splice(dragFrom, 1);
-                      legs.splice(i, 0, m);
-                      set('legs', legs);
-                    }
-                    setDragFrom(null);
-                  }}
-                  onDragEnd={() => {
-                    setDragFrom(null);
-                    setHandleIdx(null);
-                  }}
-                >
-                  <span className="flex size-6 items-center justify-center rounded-full bg-primary font-mono text-[11px] text-white">{i + 1}</span>
-                  <Select value={l.kind} onChange={(e) => setLeg(i, { kind: e.target.value as LegKind })} options={LEG_KINDS.map((k) => ({ value: k, label: legLabel(k) }))} />
-                  <div className="relative">
-                    <Crosshair size={12} className="pointer-events-none absolute top-1/2 left-2.5 z-10 -translate-y-1/2 text-faint" />
-                    <Select
-                      className="[&_select]:pl-7"
-                      value={l.geofenceId}
-                      placeholder="Elige la geocerca"
-                      onChange={(e) => setLeg(i, { geofenceId: e.target.value })}
-                      options={geofences.filter((g) => g.type !== 'avoid_zone').map((g) => ({ value: g.id, label: `${g.name.split(' · ')[0]} · ${g.locationLabel}` }))}
-                    />
-                  </div>
-                  <Input leading={<Clock3 size={12} />} value={l.window} onChange={(e) => setLeg(i, { window: e.target.value })} placeholder={i === 0 ? '27 oct · 07:30 h' : 'Ventana o límite'} />
-                  <span className="text-[11px] text-body">{estimates[i]?.text}</span>
-                  <span className="flex items-center gap-1">
-                    <span
-                      onMouseDown={() => setHandleIdx(i)}
-                      onMouseUp={() => setHandleIdx(null)}
-                      className="cursor-grab text-input active:cursor-grabbing"
-                      title="Arrastra para reordenar"
-                    >
-                      <GripVertical size={15} />
-                    </span>
-                    {f.legs.length > 2 && (
-                      <button type="button" aria-label="Quitar tramo" onClick={() => set('legs', f.legs.filter((_, j) => j !== i))} className="text-faint hover:text-crit">
-                        <X size={14} />
-                      </button>
-                    )}
-                  </span>
+            {georoute && (
+              <p className={clsx('mb-3 flex items-center gap-1.5 text-[13px]', georouteIntact ? 'text-ok-text' : 'text-med')}>
+                <Route size={14} />
+                {georouteIntact
+                  ? `Usando la georuta ${georoute.id} · ${georoute.name}`
+                  : `Cambiaste los puntos de la georuta ${georoute.id}: el viaje usará la ruta capturada`}
+              </p>
+            )}
+            {errorFor('route') && <p className="mb-3 text-[13px] text-crit">{errorFor('route')}</p>}
+            <div id={fieldId('route')} className="flex flex-col">
+              <RoutePoint
+                label="Salida"
+                timeLabel="Hora de inicio"
+                required
+                placeKey="departure"
+                timeKey="departureAt"
+                place={f.departureId}
+                time={f.departureAt}
+                places={places}
+                errorFor={errorFor}
+                touch={touch}
+                onPlace={(v) => set('departureId', v)}
+                onTime={(v) => set('departureAt', v)}
+                tone="start"
+              />
+              {f.stops.map((s, i) => (
+                <div key={s.id}>
+                  <Leg from={i === 0 ? f.departureId : f.stops[i - 1].geofenceId} to={s.geofenceId} />
+                  <RoutePoint
+                    label={`Parada intermedia ${i + 1}`}
+                    timeLabel="Hora de entrega"
+                    required
+                    placeKey={`stop${i}`}
+                    timeKey={`stop${i}At`}
+                    place={s.geofenceId}
+                    time={s.at}
+                    places={places}
+                    errorFor={errorFor}
+                    touch={touch}
+                    onPlace={(v) => setStop(i, { geofenceId: v })}
+                    onTime={(v) => setStop(i, { at: v })}
+                    onRemove={() => set('stops', f.stops.filter((_, j) => j !== i))}
+                    tone="stop"
+                  />
                 </div>
               ))}
-            </div>
-            {crossings.map((c) => (
-              <InfoBanner key={`${c.legIndex}-${c.zone.id}`} tone="warn" className="mt-3">
-                El tramo {c.legIndex + 1} cruza la zona de riesgo “{c.zone.name}”. Se sugiere custodia o salida antes de las 18:00 h.
-              </InfoBanner>
-            ))}
-          </Card>
-
-          <Card n={4} title="Asignación" subtitle="Operador, unidad y seguridad del viaje">
-            <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
-              <Field label="Operador" required error={driverHelp?.error ? driverHelp.text : undefined} help={driverHelp && !driverHelp.error ? driverHelp.text : undefined}>
-                <Select
-                  value={f.driverId}
-                  placeholder="Selecciona"
-                  invalid={driverHelp?.error}
-                  onChange={(e) => set('driverId', e.target.value)}
-                  options={drivers.map((d) => ({ value: d.id, label: `${crewName(d)}${d.status !== 'available' ? ' (en viaje)' : ''}` }))}
-                />
-              </Field>
-              <Field label="Tracto (desde GPS)" required error={unitHelp?.error ? unitHelp.text : undefined} help={unitHelp && !unitHelp.error ? unitHelp.text : undefined}>
-                <Select
-                  mono
-                  value={f.unitId}
-                  placeholder="Selecciona"
-                  invalid={unitHelp?.error}
-                  onChange={(e) => set('unitId', e.target.value)}
-                  options={tractors.map((u) => ({
-                    value: u.id,
-                    label: `${u.economic} · ${u.plate}${u.status === 'maintenance' ? ' (taller)' : u.status === 'on_trip' ? ' (en viaje)' : ''}`,
-                  }))}
-                />
-              </Field>
-              <Field label="Remolque / chasis" required>
-                <Select
-                  value={f.chassis}
-                  placeholder="Selecciona"
-                  onChange={(e) => set('chassis', e.target.value)}
-                  options={CHASSIS.map((c) => ({ value: c, label: `${c}${usedChassis.has(c) ? ' (en uso)' : ''}`, disabled: usedChassis.has(c) }))}
-                />
-              </Field>
-              <Field label="Candado" help={lock ? `Batería ${lock.batteryPct} % · cerrado` : undefined}>
-                <Select
-                  mono
-                  value={f.lockId}
-                  onChange={(e) => set('lockId', e.target.value)}
-                  options={[{ value: '', label: 'Sin candado' }, ...LOCKS.map((l) => ({ value: l.id, label: `${l.id} · ${l.batteryPct} %` }))]}
-                />
-              </Field>
-              <div className="flex items-center">
-                <Toggle
-                  color="primary"
-                  checked={f.escortRequired}
-                  onChange={toggleEscort}
-                  label="Requiere custodia"
-                  description={f.escortRequired ? (crossings[0] ? `Por zona de riesgo del tramo ${crossings[0].legIndex + 1}` : 'Custodia en todo el viaje') : 'Sin custodia'}
-                />
+              <div className="flex items-center gap-3 py-2 pl-[11px]">
+                <span className="h-7 border-l-2 border-dashed border-input" />
+                <Button size="sm" icon={<Plus size={14} />} onClick={() => set('stops', [...f.stops, newStop()])}>
+                  Agregar parada intermedia
+                </Button>
+                <LegText from={f.stops.length ? f.stops[f.stops.length - 1].geofenceId : f.departureId} to={f.arrivalId} />
               </div>
-              <Field label="Custodio" className="col-span-2">
-                <Select
-                  value={f.escortId}
-                  placeholder="Por asignar"
-                  disabled={!f.escortRequired}
-                  onChange={(e) => set('escortId', e.target.value)}
-                  options={[
-                    { value: 'prov:Protección Bajío', label: 'Protección Bajío · por asignar' },
-                    { value: 'prov:Custodias del Pacífico', label: 'Custodias del Pacífico · por asignar' },
-                    ...escorts.map((e) => ({ value: e.id, label: `${crewName(e)} · ${e.provider}${e.status !== 'available' ? ' (en servicio)' : ''}`, disabled: e.status !== 'available' })),
-                  ]}
-                />
-              </Field>
-              <Field label="Tramos con custodia">
-                <Select
-                  value={f.escortLegs}
-                  disabled={!f.escortRequired}
-                  onChange={(e) => set('escortLegs', e.target.value)}
-                  options={[{ value: 'all', label: 'Todos los tramos' }, ...f.legs.map((_, i) => ({ value: String(i + 1), label: `Tramo ${i + 1}` }))]}
-                />
-              </Field>
+              <RoutePoint
+                label="Destino"
+                timeLabel="Hora de entrega"
+                required
+                placeKey="arrival"
+                timeKey="arrivalAt"
+                place={f.arrivalId}
+                time={f.arrivalAt}
+                places={places}
+                errorFor={errorFor}
+                touch={touch}
+                onPlace={(v) => set('arrivalId', v)}
+                onTime={(v) => set('arrivalAt', v)}
+                tone="end"
+              />
             </div>
           </Card>
         </div>
 
         {/* Side column */}
-        <div className="flex w-[448px] shrink-0 flex-col gap-3.5">
+        <div className="flex w-[460px] shrink-0 flex-col gap-3.5">
           <section className="overflow-hidden rounded-md border border-line bg-white">
             <div className="flex items-center justify-between px-4 py-3">
-              <h2 className="text-[13px] font-semibold">Vista previa de ruta</h2>
-              <span className="font-mono text-[11px] text-muted">
-                {fmtNumber(totalKm)} km · {f.legs.length} tramos
+              <h2 className="text-[15px] font-semibold">Vista previa de ruta</h2>
+              <span className="font-mono text-[13px] text-muted">
+                {fmtNumber(totalKm)} km · {stops.length} {stops.length === 1 ? 'punto' : 'puntos'}
               </span>
             </div>
-            <RoutePreview form={f} estimates={estimates} />
+            <RoutePreview stops={stops} estimates={estimates} />
             <div className="grid grid-cols-3 gap-2 px-4 py-3">
               <Stat label="Distancia" value={`${fmtNumber(totalKm)} km`} />
-              <Stat label="Tiempo total" value={total ? fmtDuration(total, true) : '—'} />
-              <Stat label="ETA a cliente" value={etaClient ? `${fmtDate(etaClient)} ${fmtTime(etaClient)} h` : '—'} />
+              <Stat label="Manejo estimado" value={totalMin ? fmtDuration(totalMin, true) : '—'} />
+              <Stat label="Entrega" value={arrivalTs ? `${fmtDate(arrivalTs)} ${fmtTime(arrivalTs)} h` : '—'} />
             </div>
           </section>
 
-          <Card n={5} title="Validación antes de crear" subtitle="Lo que falta para que el viaje entre a la torre">
-            <ul className="flex flex-col gap-2">
+          <section className="rounded-md border border-line bg-white">
+            <div className="border-b border-line-soft px-4 py-3">
+              <h2 className="text-[15px] font-semibold text-ink">Antes de crear</h2>
+              <p className="text-[12px] text-muted">
+                {errors.length ? `Faltan ${errors.length} ${errors.length === 1 ? 'dato' : 'datos'}. Clic en uno para ir al campo.` : 'Todo listo para crear el viaje.'}
+              </p>
+            </div>
+            <ul className="flex flex-col gap-2 px-4 py-3.5">
               {checks.map((c, i) => (
-                <CheckRow key={i} check={c} />
+                <CheckRow key={i} check={c} onClick={c.field && c.level !== 'ok' ? () => focusField(c.field!) : undefined} />
               ))}
             </ul>
-            <p className="mt-3 text-[10px] text-muted">“Crear viaje” se habilita cuando no hay errores. Las advertencias se registran en la bitácora del viaje.</p>
-          </Card>
-
-          <Card n={6} title="Seguimiento y alertas">
-            <Toggle color="primary" checked={f.shareLink} onChange={(v) => set('shareLink', v)} label="Compartir link público con el cliente" description="Se envía por WhatsApp y correo al crear el viaje" />
-            {f.shareLink && <Contacts contacts={f.contacts} onChange={(c) => set('contacts', c)} />}
-            <p className="mt-4 text-[11px] text-body">Reglas de alerta que aplican</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {ruleChips.map(({ rule, label }) => (
-                <Chip key={rule.id} tone={rule.active ? 'primary' : 'muted'} mono className="text-[10px]">
-                  {label}
-                  {!rule.active && ' · inactiva'}
-                </Chip>
-              ))}
-            </div>
-            <p className="mt-2.5 text-[10px] text-muted">Heredadas de Admin → Reglas de alertas según cliente y tipo de movimiento.</p>
-          </Card>
+          </section>
         </div>
       </div>
     </div>
   );
 }
 
-function ContainerRow({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+function RoutePoint({
+  label,
+  timeLabel,
+  required,
+  placeKey,
+  timeKey,
+  place,
+  time,
+  places,
+  errorFor,
+  touch,
+  onPlace,
+  onTime,
+  onRemove,
+  tone,
+}: {
+  label: string;
+  timeLabel: string;
+  required?: boolean;
+  placeKey: string;
+  timeKey: string;
+  place: string;
+  time: string;
+  places: { value: string; label: string }[];
+  errorFor: (key: string) => string | undefined;
+  touch: (key: string) => void;
+  onPlace: (v: string) => void;
+  onTime: (v: string) => void;
+  onRemove?: () => void;
+  tone: 'start' | 'stop' | 'end';
+}) {
+  const placeErr = errorFor(placeKey);
+  const timeErr = errorFor(timeKey);
+  return (
+    <div className="flex items-start gap-3">
+      <span
+        className={clsx(
+          'mt-[29px] flex size-6 shrink-0 items-center justify-center rounded-full',
+          tone === 'start' ? 'bg-primary text-white' : tone === 'end' ? 'bg-ok-text text-white' : 'border-2 border-primary bg-white text-primary',
+        )}
+      >
+        <MapPin size={13} />
+      </span>
+      <div className="grid min-w-0 flex-1 grid-cols-[1.4fr_1fr] gap-3">
+        <Field label={label} required={required} error={placeErr}>
+          <Select
+            id={fieldId(placeKey)}
+            value={place}
+            placeholder="Elige la geocerca"
+            invalid={Boolean(placeErr)}
+            onBlur={() => touch(placeKey)}
+            onChange={(e) => {
+              onPlace(e.target.value);
+              touch(placeKey);
+            }}
+            options={places}
+          />
+        </Field>
+        <Field label={timeLabel} required={required} error={timeErr}>
+          <Input id={fieldId(timeKey)} type="datetime-local" value={time} invalid={Boolean(timeErr)} onBlur={() => touch(timeKey)} onChange={(e) => onTime(e.target.value)} />
+        </Field>
+      </div>
+      {onRemove ? (
+        <button type="button" aria-label={`Quitar ${label.toLowerCase()}`} onClick={onRemove} className="mt-[32px] text-faint hover:text-crit">
+          <X size={16} />
+        </button>
+      ) : (
+        <span className="w-4" />
+      )}
+    </div>
+  );
 }
 
-function Card({ n, title, subtitle, right, children }: { n: number; title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode }) {
+function useLegText(from: string, to: string): string | null {
+  const geofences = useStore((s) => s.geofences);
+  const e = from && to ? segmentEstimate(from, to, geofences) : null;
+  return e ? `${fmtDuration(e.minutes)} · ${e.km} km${e.approx ? ' aprox.' : ''}` : null;
+}
+
+/** Driving time between two consecutive points (vertical connector). */
+function Leg({ from, to }: { from: string; to: string }) {
+  const text = useLegText(from, to);
+  return (
+    <div className="flex items-center gap-3 py-1.5 pl-[11px]">
+      <span className="h-5 border-l-2 border-input" />
+      {text && (
+        <span className="flex items-center gap-1 text-[12px] text-muted">
+          <ArrowDown size={12} /> {text}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function LegText({ from, to }: { from: string; to: string }) {
+  const text = useLegText(from, to);
+  return text ? (
+    <span className="flex items-center gap-1 text-[12px] text-muted">
+      <ArrowDown size={12} /> {text}
+    </span>
+  ) : null;
+}
+
+function Card({ n, title, right, children }: { n: number; title: string; right?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-md border border-line bg-white">
-      <div className="flex items-start gap-3 border-b border-line-soft px-4 py-3">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">{n}</span>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-[13px] font-semibold text-ink">{title}</h2>
-          {subtitle && <p className="text-[10px] text-muted">{subtitle}</p>}
-        </div>
+      <div className="flex items-center gap-3 border-b border-line-soft px-4 py-3">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{n}</span>
+        <h2 className="min-w-0 flex-1 text-[15px] font-semibold text-ink">{title}</h2>
         {right}
       </div>
-      <div className="px-4 py-3.5">{children}</div>
+      <div className="px-4 py-4">{children}</div>
     </section>
   );
 }
@@ -602,68 +599,39 @@ function Card({ n, title, subtitle, right, children }: { n: number; title: strin
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[10px] text-muted">{label}</p>
-      <p className="font-mono text-[12px] font-bold text-ink">{value}</p>
+      <p className="text-[12px] text-muted">{label}</p>
+      <p className="font-mono text-[14px] font-bold text-ink">{value}</p>
     </div>
   );
 }
 
-function CheckRow({ check }: { check: CheckItem }) {
+function CheckRow({ check, onClick }: { check: CheckItem; onClick?: () => void }) {
   const style =
     check.level === 'ok'
-      ? { box: 'bg-ok-bg text-ok-text', icon: <Check size={11} strokeWidth={3} /> }
+      ? { box: 'bg-ok-bg text-ok-text', icon: <Check size={12} strokeWidth={3} /> }
       : check.level === 'warn'
-        ? { box: 'bg-med-bg text-med', icon: <span className="text-[11px] font-bold">!</span> }
-        : { box: 'bg-crit-bg text-crit', icon: <X size={11} strokeWidth={3} /> };
-  return (
-    <li className="flex items-center gap-2.5 text-[12px]">
-      <span className={clsx('flex size-[18px] shrink-0 items-center justify-center rounded-full', style.box)}>{style.icon}</span>
+        ? { box: 'bg-med-bg text-med', icon: <span className="text-[13px] font-bold">!</span> }
+        : { box: 'bg-crit-bg text-crit', icon: <X size={12} strokeWidth={3} /> };
+  const content = (
+    <>
+      <span className={clsx('mt-px flex size-[20px] shrink-0 items-center justify-center rounded-full', style.box)}>{style.icon}</span>
       <span className={check.level === 'error' ? 'text-crit' : 'text-body'}>{check.text}</span>
+    </>
+  );
+  return (
+    <li>
+      {onClick ? (
+        <button type="button" onClick={onClick} className="flex w-full items-start gap-2.5 rounded-[3px] text-left text-[14px] hover:bg-surface-alt">
+          {content}
+        </button>
+      ) : (
+        <div className="flex items-start gap-2.5 text-[14px]">{content}</div>
+      )}
     </li>
   );
 }
 
-function Contacts({ contacts, onChange }: { contacts: string[]; onChange: (c: string[]) => void }) {
-  const [adding, setAdding] = useState(false);
-  const [value, setValue] = useState('');
-  const add = () => {
-    if (value.trim()) onChange([...contacts, value.trim()]);
-    setValue('');
-    setAdding(false);
-  };
-  return (
-    <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pl-[38px]">
-      {contacts.map((c) => (
-        <span key={c} className="flex items-center gap-1 rounded-[3px] bg-line-soft px-1.5 py-0.5 text-[10px] text-body">
-          {c}
-          <button type="button" aria-label={`Quitar ${c}`} onClick={() => onChange(contacts.filter((x) => x !== c))} className="text-faint hover:text-crit">
-            <X size={10} />
-          </button>
-        </span>
-      ))}
-      {adding ? (
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={add}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') add();
-            if (e.key === 'Escape') setAdding(false);
-          }}
-          placeholder="correo o teléfono"
-          className="h-6 w-[170px] rounded-[3px] border border-input px-1.5 text-[11px] focus:border-primary focus:outline-none"
-        />
-      ) : (
-        <button type="button" onClick={() => setAdding(true)} className="text-[11px] font-medium text-primary hover:underline">
-          + contacto
-        </button>
-      )}
-    </div>
-  );
-}
-
-function numberIcon(n: number, tone: 'navy' | 'green' | 'ring') {
+function pointIcon(n: number, tone: 'navy' | 'green' | 'ring') {
   const style =
     tone === 'green'
       ? 'background:#047857;color:#fff'
@@ -672,56 +640,41 @@ function numberIcon(n: number, tone: 'navy' | 'green' | 'ring') {
         : 'background:#1e3a5f;color:#fff';
   return L.divIcon({
     className: '',
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    html: `<div style="${style};width:20px;height:20px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 10px var(--font-mono);box-shadow:0 1px 3px rgba(0,0,0,.3)">${n}</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    html: `<div style="${style};width:22px;height:22px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 11px var(--font-mono);box-shadow:0 1px 3px rgba(0,0,0,.3)">${n}</div>`,
   });
 }
 
-function RoutePreview({ form, estimates }: { form: NewTripForm; estimates: ReturnType<typeof estimateLegs> }) {
+function RoutePreview({ stops, estimates }: { stops: string[]; estimates: ReturnType<typeof estimateRoute> }) {
   const geofences = useStore((s) => s.geofences);
   const [map, setMap] = useState<LeafletMap | null>(null);
-  const points = form.legs.map((l) => geofences.find((g) => g.id === l.geofenceId)).map((g) => (g ? centerOf(g) : null));
-  const key = form.legs.map((l) => l.geofenceId).join('|');
+  const points = stops.map((id) => geofences.find((g) => g.id === id)).map((g) => (g ? centerOf(g) : null));
+  const key = stops.join('|');
   const lastKey = useRef('');
 
   useEffect(() => {
     if (!map || key === lastKey.current) return;
     lastKey.current = key;
-    const pts = [...estimates.flatMap((e) => e.path ?? []), ...points.filter((p): p is [number, number] => Boolean(p))];
-    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [24, 24] });
+    const pts = [...estimates.flatMap((e) => e.path), ...points.filter((p): p is [number, number] => Boolean(p))];
+    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [28, 28] });
     else if (pts.length === 1) map.setView(pts[0], 10);
   }, [map, key, estimates, points]);
 
   return (
-    <div className="relative isolate h-[220px] border-y border-line-soft">
+    <div className="relative isolate h-[260px] border-y border-line-soft">
       <BaseMap onReady={setMap} zoom={7}>
-        <RiskZonesLayer />
-        {estimates.map((e, i) =>
-          e.path ? (
-            <Polyline
-              key={i}
-              positions={e.path}
-              pathOptions={
-                i === estimates.length - 1 && i > 1
-                  ? { color: '#6b7280', weight: 3, dashArray: '5 5' }
-                  : { color: '#1e3a5f', weight: 4, opacity: 0.9, dashArray: e.approx ? '2 6' : undefined }
-              }
-            />
-          ) : null,
-        )}
-        {points.map((p, i) =>
-          p ? <Marker key={i} position={p} icon={numberIcon(i + 1, form.legs[i].kind === 'client_delivery' || form.legs[i].kind === 'client_loading' ? 'green' : i === form.legs.length - 1 && i > 1 ? 'ring' : 'navy')} /> : null,
-        )}
+        {estimates.map((e, i) => (
+          <Polyline key={i} positions={e.path} pathOptions={{ color: '#1e3a5f', weight: 4, opacity: 0.9, dashArray: e.approx ? '2 6' : undefined }} />
+        ))}
+        {points.map((p, i) => (p ? <Marker key={i} position={p} icon={pointIcon(i + 1, i === points.length - 1 && i > 0 ? 'green' : i === 0 ? 'navy' : 'ring')} /> : null))}
       </BaseMap>
-      {points.every((p) => !p) && (
-        <div className="absolute inset-0 z-[500] flex items-center justify-center bg-white/70 text-[11px] text-muted">
-          Elige geocercas en “Ruta y tramos” o usa una plantilla
-        </div>
+      {points.length === 0 && (
+        <div className="absolute inset-0 z-[500] flex items-center justify-center bg-white/70 text-[13px] text-muted">Elige salida y destino, o usa una georuta</div>
       )}
       {estimates.some((e) => e.approx) && (
-        <span className="absolute bottom-1.5 left-2 z-[500] flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[9px] text-med">
-          <AlertTriangle size={10} /> Ruta aproximada en tramos sin ruta guardada
+        <span className="absolute bottom-1.5 left-2 z-[500] flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] text-med">
+          <AlertTriangle size={11} /> Ruta aproximada en tramos sin ruta guardada
         </span>
       )}
     </div>

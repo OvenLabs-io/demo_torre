@@ -29,7 +29,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel, danger, onCo
         </>
       }
     >
-      <div className="text-[12px] leading-relaxed text-body">{message}</div>
+      <div className="text-[14px] leading-relaxed text-body">{message}</div>
     </Modal>
   );
 }

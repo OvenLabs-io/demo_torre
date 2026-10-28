@@ -60,18 +60,18 @@ export function RulesPage() {
       {tab === 'reglas' ? (
         <div className="overflow-hidden rounded-md border border-line bg-white">
           <div className="scrollbar-thin overflow-x-auto">
-            <table className="w-full min-w-[1300px] table-fixed border-collapse text-[11px]">
+            <table className="w-full min-w-[1300px] table-fixed border-collapse text-[13px]">
               <thead>
                 <tr>
                   <th className="th w-[52px]" aria-label="Activa" />
-                  <th className="th w-[56px]">ID</th>
+                  <th className="th w-[64px]">ID</th>
                   <th className="th w-[220px]">Regla</th>
                   <th className="th w-[300px]">Condición</th>
                   <th className="th w-[90px]">Severidad</th>
-                  <th className="th w-[70px]">SLA</th>
-                  <th className="th w-[150px]">Protocolo</th>
+                  <th className="th w-[90px]">SLA</th>
+                  <th className="th w-[180px]">Protocolo</th>
                   <th className="th w-[230px]">Notificar a</th>
-                  <th className="th w-[90px] text-right">Disparos 30 d</th>
+                  <th className="th w-[120px] text-right">Disparos 30 d</th>
                   <th className="th" />
                 </tr>
               </thead>
@@ -90,12 +90,12 @@ export function RulesPage() {
                         />
                       </td>
                       <td className="px-3 font-mono font-bold text-primary">{r.id}</td>
-                      <td className={clsx('px-3 text-[12px] font-medium', r.active ? 'text-ink' : 'text-faint')}>{r.name}</td>
+                      <td className={clsx('px-3 text-[14px] font-medium', r.active ? 'text-ink' : 'text-faint')}>{r.name}</td>
                       <td className="px-3 py-1.5 text-body">{r.conditionText}</td>
                       <td className="px-3">
                         <SeverityChip severity={r.severity} />
                       </td>
-                      <td className="px-3 font-mono text-body">{fmtSla(r.slaMinutes)}</td>
+                      <td className="px-3 font-mono whitespace-nowrap text-body">{fmtSla(r.slaMinutes)}</td>
                       <td className="px-3 text-body">{p ? `${p.shortName} (${p.steps.length} ${p.steps.length === 1 ? 'paso' : 'pasos'})` : '—'}</td>
                       <td className="px-3 text-body">{recipientsText(r.notify.recipients)}</td>
                       <td className="px-3 text-right font-mono text-body">{r.fired30d ?? '—'}</td>

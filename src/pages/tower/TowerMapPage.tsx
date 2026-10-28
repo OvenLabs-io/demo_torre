@@ -87,7 +87,7 @@ export function TowerMapPage() {
             aria-pressed={prefs.mapLayers[l.key]}
             onClick={() => prefs.toggleLayer(l.key)}
             className={clsx(
-              'flex h-[30px] items-center gap-2 rounded-[4px] border px-3 text-[12px] transition-colors',
+              'flex h-[34px] items-center gap-2 rounded-[4px] border px-3 text-[14px] transition-colors',
               prefs.mapLayers[l.key] ? 'border-primary bg-primary text-white' : 'border-input bg-white text-body hover:bg-surface-alt',
             )}
           >
@@ -138,13 +138,13 @@ export function TowerMapPage() {
           {prefs.mapLayers.traffic && <TrafficLegend />}
 
           <div className="absolute bottom-2.5 left-2.5 z-[500] flex flex-col gap-1">
-            <div className="flex items-center gap-3 rounded-[4px] border border-line bg-white px-3 py-1.5 text-[11px] text-body shadow-sm">
+            <div className="flex items-center gap-3 rounded-[4px] border border-line bg-white px-3 py-1.5 text-[13px] text-body shadow-sm">
               <SummaryItem color="bg-ok" count={summary.moving} label="en movimiento" />
               <SummaryItem color="bg-med" count={summary.stopped} label={summary.stopped === 1 ? 'detenida' : 'detenidas'} />
               <SummaryItem color="bg-crit" count={summary.alert} label="con alerta" />
               <SummaryItem color="bg-faint" count={summary.nosignal} label="sin señal" />
             </div>
-            <span className="px-1 text-[9px] text-muted">Datos GPS simulados · se actualizan cada 5 s</span>
+            <span className="px-1 text-[11px] text-muted">Datos GPS simulados · se actualizan cada 5 s</span>
           </div>
           <MapZoomButtons map={map} onFit={fitAll} />
         </div>
@@ -153,8 +153,8 @@ export function TowerMapPage() {
         <aside className="flex w-[400px] shrink-0 flex-col overflow-hidden rounded-md border border-line bg-white">
           <div className="flex items-center gap-3 border-b border-line px-3.5 py-3">
             <div className="min-w-0 flex-1">
-              <h2 className="text-[13px] font-semibold text-ink">Viajes activos</h2>
-              <p className="text-[10px] text-muted">
+              <h2 className="text-[15px] font-semibold text-ink">Viajes activos</h2>
+              <p className="text-[12px] text-muted">
                 {visible.length} visibles en el mapa · clic centra la unidad, doble clic abre el viaje
               </p>
             </div>
@@ -170,16 +170,16 @@ export function TowerMapPage() {
             />
           </div>
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-            {visible.length === 0 && <p className="px-4 py-10 text-center text-[12px] text-muted">Ningún viaje coincide con los filtros.</p>}
+            {visible.length === 0 && <p className="px-4 py-10 text-center text-[14px] text-muted">Ningún viaje coincide con los filtros.</p>}
             {panelGroups.map((g) => (
               <Fragment key={g.key}>
                 {grouped && (
-                  <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line-soft bg-line-soft px-3.5 py-1.5 text-[10px]">
+                  <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line-soft bg-line-soft px-3.5 py-1.5 text-[12px]">
                     <span className="font-bold text-ink">GRUPO {g.label}</span>
                     <span className="text-muted">
                       {g.trips.length} {g.trips.length === 1 ? 'viaje' : 'viajes'}
                     </span>
-                    {g.severity !== 'ok' && <SeverityChip severity={g.severity} className="text-[9px]" />}
+                    {g.severity !== 'ok' && <SeverityChip severity={g.severity} className="text-[11px]" />}
                   </div>
                 )}
                 {g.trips.map((t) => (
@@ -229,17 +229,17 @@ function GeofenceLegend() {
     ['Zona a evitar', GEOFENCE_COLOR.avoid_zone],
   ];
   return (
-    <div className="absolute top-2.5 left-2.5 z-[500] w-[190px] rounded-[4px] border border-line bg-white px-3 py-2.5 shadow-sm">
-      <p className="text-[9px] font-semibold tracking-[0.5px] text-muted uppercase">Geocercas (solo lectura)</p>
+    <div className="absolute top-2.5 left-2.5 z-[500] w-[230px] rounded-[4px] border border-line bg-white px-3 py-2.5 shadow-sm">
+      <p className="text-[11px] font-semibold tracking-[0.5px] text-muted uppercase">Geocercas (solo lectura)</p>
       <ul className="mt-1.5 flex flex-col gap-1">
         {items.map(([label, color]) => (
-          <li key={label} className="flex items-center gap-2 text-[11px] text-body">
+          <li key={label} className="flex items-center gap-2 text-[13px] text-body">
             <span className="size-3 rounded-[2px] border" style={{ borderColor: color, background: `${color}33` }} />
             {label}
           </li>
         ))}
       </ul>
-      <p className="mt-1.5 text-[9px] text-faint">Se crean en Catálogos y se sincronizan con la plataforma GPS</p>
+      <p className="mt-1.5 text-[11px] text-faint">Se crean en el menú Geocercas y se sincronizan con la plataforma GPS</p>
     </div>
   );
 }
@@ -247,8 +247,8 @@ function GeofenceLegend() {
 function TrafficLegend() {
   const items = useTrafficLegend();
   return (
-    <div className="absolute top-2.5 right-2.5 z-[500] flex items-center gap-3 rounded-[4px] border border-line bg-white px-3 py-1.5 text-[11px] text-body shadow-sm">
-      <span className="text-[9px] font-semibold tracking-[0.5px] text-muted uppercase">Tráfico (simulado)</span>
+    <div className="absolute top-2.5 right-2.5 z-[500] flex items-center gap-3 rounded-[4px] border border-line bg-white px-3 py-1.5 text-[13px] text-body shadow-sm">
+      <span className="text-[11px] font-semibold tracking-[0.5px] text-muted uppercase">Tráfico (simulado)</span>
       {items.map((i) => (
         <span key={i.label} className="flex items-center gap-1.5">
           <span className="h-1 w-4 rounded-full" style={{ background: i.color }} />

@@ -41,7 +41,7 @@ function ReadyHook({ onReady }: { onReady: (map: LeafletMap) => void }) {
 /** Floating zoom (+ / − / fit) buttons, styled like the Figma map controls. */
 export function MapZoomButtons({ map, onFit }: { map: LeafletMap | null; onFit: () => void }) {
   const btn =
-    'flex size-[30px] items-center justify-center border-b border-line bg-white text-[15px] text-body last:border-b-0 hover:bg-surface-alt';
+    'flex size-[34px] items-center justify-center border-b border-line bg-white text-[17px] text-body last:border-b-0 hover:bg-surface-alt';
   return (
     <div className="absolute right-2.5 bottom-[52px] z-[500] flex flex-col overflow-hidden rounded-[4px] border border-line shadow-sm">
       <button type="button" aria-label="Acercar" className={btn} onClick={() => map?.zoomIn()}>

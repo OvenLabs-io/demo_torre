@@ -31,7 +31,7 @@ export const TripMapCard = forwardRef<HTMLDivElement, { trip: Trip; selected: bo
         onKeyDown={(e) => e.key === 'Enter' && onOpen()}
         title="Clic: centrar la unidad · Doble clic: abrir el viaje"
         className={clsx(
-          'border-b border-line-soft px-3.5 py-3 text-[11px] transition-colors outline-none hover:bg-surface-alt focus-visible:bg-surface-alt',
+          'border-b border-line-soft px-3.5 py-3 text-[13px] transition-colors outline-none hover:bg-surface-alt focus-visible:bg-surface-alt',
           critical ? 'border-l-[3px] border-l-crit pl-[11px]' : 'border-l-[3px] border-l-transparent pl-[11px]',
           selected && (critical ? 'bg-crit-row' : 'bg-[#f5f8fc]'),
         )}
@@ -43,17 +43,19 @@ export const TripMapCard = forwardRef<HTMLDivElement, { trip: Trip; selected: bo
               e.stopPropagation();
               onOpen();
             }}
-            className="font-mono text-[12px] font-bold text-primary hover:underline"
+            className="font-mono text-[14px] font-bold text-primary hover:underline"
             title="Abrir el detalle del viaje"
           >
             {trip.id}
           </button>
-          <span className="rounded-[2px] bg-line-soft px-1 text-[8px] font-medium tracking-[0.3px] text-muted">
-            {movementTag(trip, ' · ')}
-          </span>
+          {movementTag(trip) && (
+            <span className="rounded-[2px] bg-line-soft px-1 text-[10px] font-medium tracking-[0.3px] text-muted">
+              {movementTag(trip, ' · ')}
+            </span>
+          )}
           <div className="flex-1" />
           {trip.severity !== 'ok' && <SeverityChip severity={trip.severity} />}
-          <span className="font-mono text-[11px] font-bold text-ink">ETA {fmtTimeH(trip.eta)}</span>
+          <span className="font-mono text-[13px] font-bold text-ink">ETA {fmtTimeH(trip.eta)}</span>
         </div>
         <p className="mt-1 text-body">{client?.name}</p>
         <p className="mt-1 text-body">
@@ -66,7 +68,7 @@ export const TripMapCard = forwardRef<HTMLDivElement, { trip: Trip; selected: bo
           <span className="text-body">{legText(trip)}</span>
           <div className="flex-1" />
           <span className={clsx('font-mono', trip.live.speedKmh === 0 ? 'text-muted' : 'text-ink')}>{trip.live.speedKmh} km/h</span>
-          <Chip tone={gpsTone(trip, now)} mono className="text-[9px]">
+          <Chip tone={gpsTone(trip, now)} mono className="text-[11px]">
             GPS {fmtTime(trip.live.lastGpsAt)}
           </Chip>
         </div>
@@ -80,7 +82,7 @@ export const TripMapCard = forwardRef<HTMLDivElement, { trip: Trip; selected: bo
             {lockOpen ? 'Candado abierto' : 'Candado cerrado'}
           </span>
           {free && (
-            <Chip tone={free.tone} mono className="text-[9px]">
+            <Chip tone={free.tone} mono className="text-[11px]">
               {free.label}
             </Chip>
           )}

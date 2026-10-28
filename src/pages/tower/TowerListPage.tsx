@@ -40,7 +40,7 @@ export function TowerListPage() {
           label="Mostrar grupos"
         />
         <div className="flex-1" />
-        <span className="text-[11px] text-muted">
+        <span className="text-[13px] text-muted">
           Mostrando {filtered.length} de {total} · ordenado por severidad
         </span>
         <ColumnsPicker />
@@ -48,10 +48,10 @@ export function TowerListPage() {
 
       <div className="overflow-hidden rounded-md border border-line bg-white">
         <div className="scrollbar-thin overflow-x-auto">
-          <table className="w-full min-w-[1384px] table-fixed border-collapse">
+          <table className="w-full min-w-[1720px] table-fixed border-collapse">
             <thead>
               <tr>
-                <th className="th w-[124px]">Viaje</th>
+                <th className="th w-[150px]">Viaje</th>
                 {visibleCols.map((c) => (
                   <th key={c.key} className={clsx('th', COL_WIDTH[c.key])}>
                     {c.label}
@@ -62,7 +62,7 @@ export function TowerListPage() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={colCount} className="px-3 py-10 text-center text-[12px] text-muted">
+                  <td colSpan={colCount} className="px-3 py-10 text-center text-[14px] text-muted">
                     Ningún viaje activo coincide con la búsqueda o el filtro.
                   </td>
                 </tr>
@@ -86,7 +86,7 @@ export function TowerListPage() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft px-3.5 py-2.5 text-[10px] text-muted">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft px-3.5 py-2.5 text-[12px] text-muted">
           <div className="flex items-center gap-3">
             <span>Leyenda:</span>
             {(['critical', 'high', 'medium', 'ok'] as const).map((s) => (
@@ -106,18 +106,18 @@ export function TowerListPage() {
 }
 
 const COL_WIDTH: Record<TowerColumn, string> = {
-  unit: 'w-[84px]',
-  driver: 'w-[150px]',
-  containers: 'w-[128px]',
-  leg: 'w-[168px]',
-  eta: 'w-[72px]',
-  gps: 'w-[84px]',
-  speed: 'w-[66px]',
-  stopped: 'w-[104px]',
-  log: 'w-[64px]',
-  lock: 'w-[76px]',
-  freeDays: 'w-[90px]',
-  location: '',
+  unit: 'w-[100px]',
+  driver: 'w-[190px]',
+  containers: 'w-[150px]',
+  leg: 'w-[200px]',
+  eta: 'w-[90px]',
+  gps: 'w-[100px]',
+  speed: 'w-[86px]',
+  stopped: 'w-[140px]',
+  log: 'w-[84px]',
+  lock: 'w-[96px]',
+  freeDays: 'w-[106px]',
+  location: 'w-[240px]',
 };
 
 function GroupRow({
@@ -142,7 +142,7 @@ function GroupRow({
           type="button"
           onClick={onToggle}
           aria-expanded={!collapsed}
-          className="flex h-[28px] items-center gap-2 text-[11px]"
+          className="flex h-[34px] items-center gap-2 text-[13px]"
         >
           {collapsed ? <ChevronRight size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
           <span className="font-bold text-ink">GRUPO {label}</span>
@@ -165,15 +165,17 @@ function TripRow({ trip, cols }: { trip: Trip; cols: TowerColumn[] }) {
       onClick={() => open(trip.id)}
       onKeyDown={(e) => e.key === 'Enter' && open(trip.id)}
       className={clsx(
-        'h-10 cursor-pointer border-b border-line-soft text-[12px] transition-colors hover:bg-surface-alt focus-visible:bg-surface-alt focus-visible:outline-none',
+        'h-12 cursor-pointer border-b border-line-soft text-[14px] transition-colors hover:bg-surface-alt focus-visible:bg-surface-alt focus-visible:outline-none',
         critical && 'bg-crit-row',
       )}
     >
       <td className={clsx('px-3 py-1.5 align-middle whitespace-nowrap', critical && 'border-l-[3px] border-l-crit pl-[9px]')}>
-        <div className="font-mono text-[12px] leading-tight font-bold text-primary">{trip.id}</div>
-        <span className="mt-0.5 inline-block rounded-[2px] bg-primary-soft px-1 text-[8px] font-medium tracking-[0.3px] text-muted">
-          {movementTag(trip)}
-        </span>
+        <div className="font-mono text-[14px] leading-tight font-bold text-primary">{trip.id}</div>
+        {movementTag(trip) && (
+          <span className="mt-0.5 inline-block rounded-[2px] bg-primary-soft px-1 text-[10px] font-medium tracking-[0.3px] text-muted">
+            {movementTag(trip)}
+          </span>
+        )}
       </td>
       {cols.map((c) => (
         <td key={c} className="overflow-hidden px-3 py-1.5 align-middle whitespace-nowrap">
@@ -201,7 +203,7 @@ function Cell({ col, trip }: { col: TowerColumn; trip: Trip }) {
       return (
         <Stack
           top={
-            <span className="block max-w-full truncate font-mono text-[11px]" title={text}>
+            <span className="block max-w-full truncate font-mono text-[13px]" title={text}>
               {text}
             </span>
           }
@@ -217,7 +219,7 @@ function Cell({ col, trip }: { col: TowerColumn; trip: Trip }) {
     case 'gps':
       return (
         <span title={fmtAgo(trip.live.lastGpsAt, now)}>
-          <Chip tone={gpsTone(trip, now)} mono className="text-[11px]">
+          <Chip tone={gpsTone(trip, now)} mono className="text-[13px]">
             {fmtTime(trip.live.lastGpsAt)}
           </Chip>
         </span>
@@ -258,14 +260,14 @@ function Cell({ col, trip }: { col: TowerColumn; trip: Trip }) {
       const f = freeDaysInfo(trip, now);
       if (!f) return <span className="text-faint">—</span>;
       return (
-        <Chip tone={f.tone} mono className="text-[11px]">
+        <Chip tone={f.tone} mono className="text-[13px]">
           {f.label}
         </Chip>
       );
     }
     case 'location':
       return (
-        <span className="flex items-center gap-1.5 text-[11px] text-body">
+        <span className="flex items-center gap-1.5 text-[13px] text-body">
           <MapPin size={12} className="shrink-0 text-faint" />
           <span className="truncate">{trip.live.locationLabel}</span>
         </span>
@@ -277,7 +279,7 @@ function Stack({ top, bottom, mono }: { top: ReactNode; bottom?: ReactNode; mono
   return (
     <div className="flex flex-col leading-tight">
       <span>{top}</span>
-      {bottom && <span className={clsx('mt-0.5 text-[9px] text-muted', mono && 'font-mono')}>{bottom}</span>}
+      {bottom && <span className={clsx('mt-0.5 text-[11px] text-muted', mono && 'font-mono')}>{bottom}</span>}
     </div>
   );
 }
@@ -308,7 +310,7 @@ function ColumnsPicker() {
           <button
             type="button"
             onClick={resetColumns}
-            className="mt-1 border-t border-line-soft px-2 pt-2 pb-1 text-left text-[11px] font-medium text-primary hover:underline"
+            className="mt-1 border-t border-line-soft px-2 pt-2 pb-1 text-left text-[13px] font-medium text-primary hover:underline"
           >
             Mostrar todas
           </button>

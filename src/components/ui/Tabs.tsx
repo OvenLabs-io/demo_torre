@@ -35,14 +35,14 @@ export function Tabs<K extends string>({
             title={t.title}
             onClick={() => onChange(t.key)}
             className={clsx(
-              'relative -mb-px flex h-9 items-center gap-1.5 border-b-2 text-[12px] whitespace-nowrap transition-colors',
+              'relative -mb-px flex h-9 items-center gap-1.5 border-b-2 text-[14px] whitespace-nowrap transition-colors',
               active ? 'border-primary font-semibold text-primary' : 'border-transparent font-medium text-muted hover:text-body',
               t.disabled && 'cursor-not-allowed opacity-50 hover:text-muted',
             )}
           >
             {t.label}
             {t.count !== undefined && (
-              <span className="rounded-[3px] bg-line-soft px-1 text-[9px] font-medium text-body">{t.count}</span>
+              <span className="rounded-[3px] bg-line-soft px-1 text-[11px] font-medium text-body">{t.count}</span>
             )}
           </button>
         );
@@ -78,7 +78,7 @@ export function Segmented<K extends string>({
           aria-pressed={it.key === value}
           className={clsx(
             'rounded-[3px] font-medium whitespace-nowrap transition-colors',
-            size === 'sm' ? 'h-[22px] px-2 text-[11px]' : tone === 'light' ? 'h-[28px] px-3 text-[12px]' : 'h-[26px] px-3 text-[11px]',
+            size === 'sm' ? 'h-[22px] px-2 text-[13px]' : tone === 'light' ? 'h-[28px] px-3 text-[14px]' : 'h-[26px] px-3 text-[13px]',
             it.key === value
               ? tone === 'light'
                 ? 'bg-white text-ink shadow-sm'

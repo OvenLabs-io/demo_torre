@@ -81,7 +81,7 @@ export function RuleModal({ rule, onClose }: { rule: AlertRule | null; onClose: 
       footer={
         <>
           <Toggle checked={d.active} onChange={(v) => set('active', v)} label={<span className="font-normal">Regla activa al guardar</span>} />
-          <div className="flex-1 text-right text-[10px] text-crit">{errors[0]}</div>
+          <div className="flex-1 text-right text-[12px] text-crit">{errors[0]}</div>
           <Button onClick={onClose}>Cancelar</Button>
           <Button variant="primary" onClick={save}>
             Guardar regla
@@ -99,7 +99,7 @@ export function RuleModal({ rule, onClose }: { rule: AlertRule | null; onClose: 
           <div className="mt-2 flex flex-col gap-2 rounded-[5px] bg-surface-alt p-2.5">
             {d.clauses.map((c, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="flex h-[30px] w-[178px] shrink-0 items-center gap-1.5 rounded-[4px] bg-line-soft px-2.5 text-[12px] whitespace-nowrap text-muted">
+                <span className="flex h-[34px] w-[178px] shrink-0 items-center gap-1.5 rounded-[4px] bg-line-soft px-2.5 text-[14px] whitespace-nowrap text-muted">
                   <Lock size={11} />
                   {i === 0 ? 'Cuando la unidad está' : 'y'}
                 </span>
@@ -136,7 +136,7 @@ export function RuleModal({ rule, onClose }: { rule: AlertRule | null; onClose: 
             <button
               type="button"
               onClick={() => set('clauses', [...d.clauses, { subject: 'Ignición', operator: 'es', value: 'OFF o cualquiera' }])}
-              className="w-fit text-[11px] font-medium text-primary hover:underline"
+              className="w-fit text-[13px] font-medium text-primary hover:underline"
             >
               + agregar condición
             </button>

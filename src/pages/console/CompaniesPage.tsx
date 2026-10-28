@@ -143,7 +143,7 @@ export function CompaniesPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar empresa, RFC, contacto…"
                 aria-label="Buscar empresa, RFC o contacto"
-                className="h-[30px] w-full rounded-[4px] border border-input pr-2 pl-8 text-[12px] placeholder:text-faint focus:border-primary focus:outline-none"
+                className="h-[34px] w-full rounded-[4px] border border-input pr-2 pl-8 text-[14px] placeholder:text-faint focus:border-primary focus:outline-none"
               />
             </div>
             <Select
@@ -174,10 +174,10 @@ export function CompaniesPage() {
               options={[{ value: '', label: 'Estado: Todos' }, ...Object.entries(STATUS_META).map(([k, v]) => ({ value: k, label: `Estado: ${v.label}` }))]}
             />
             <div className="flex-1" />
-            <span className="text-[11px] text-muted">{rows.length} empresas</span>
+            <span className="text-[13px] text-muted">{rows.length} empresas</span>
           </div>
           <div className="scrollbar-thin overflow-x-auto">
-            <table className="w-full min-w-[920px] table-fixed border-collapse text-[11px] [&_td]:px-2.5! [&_th]:px-2.5!">
+            <table className="w-full min-w-[920px] table-fixed border-collapse text-[13px] [&_td]:px-2.5! [&_th]:px-2.5!">
               <thead>
                 <tr>
                   <th className="th w-[156px]">Empresa</th>
@@ -210,10 +210,10 @@ export function CompaniesPage() {
                       <td className="px-3">
                         <Chip tone={PLAN_META[c.plan].tone}>{PLAN_META[c.plan].label}</Chip>
                       </td>
-                      <td className="px-3 font-mono text-[11px] whitespace-nowrap text-body">
+                      <td className="px-3 font-mono text-[13px] whitespace-nowrap text-body">
                         {c.units.used}/{c.units.limit}
                       </td>
-                      <td className="px-3 font-mono text-[11px] text-body">{c.users.used}</td>
+                      <td className="px-3 font-mono text-[13px] text-body">{c.users.used}</td>
                       <td className={clsx('truncate px-3', c.gps.provider ? 'text-body' : 'text-faint')}>{gpsText(c)}</td>
                       <td className={clsx('px-3', c.sync.status === 'error' || c.sync.status === 'pending' ? 'text-crit' : 'text-body')}>
                         <span className="flex items-center gap-1.5 truncate">
@@ -221,8 +221,8 @@ export function CompaniesPage() {
                           {syncText(c, now)}
                         </span>
                       </td>
-                      <td className="px-3 font-mono text-[11px] text-body">{c.activeTrips}</td>
-                      <td className="px-3 font-mono text-[11px] text-body">{fmtNumber(c.alerts30d)}</td>
+                      <td className="px-3 font-mono text-[13px] text-body">{c.activeTrips}</td>
+                      <td className="px-3 font-mono text-[13px] text-body">{fmtNumber(c.alerts30d)}</td>
                       <td className={clsx('px-3', st.text)}>
                         <span className="flex items-center gap-1.5 truncate">
                           <Dot className={st.dot} />
@@ -262,10 +262,10 @@ function CompanyPanel({ company: c }: { company: Company }) {
   return (
     <aside className="flex w-[400px] shrink-0 flex-col overflow-hidden rounded-md border border-line bg-white">
       <div className="flex items-start gap-3 border-b border-line px-4 py-3.5">
-        <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[6px] bg-primary text-[12px] font-bold text-white">{companyInitials(c.name)}</span>
+        <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[6px] bg-primary text-[14px] font-bold text-white">{companyInitials(c.name)}</span>
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-semibold text-ink">{c.name}</p>
-          <p className="text-[10px] text-muted">
+          <p className="text-[16px] font-semibold text-ink">{c.name}</p>
+          <p className="text-[12px] text-muted">
             Cliente desde {c.customerSince} · Plan {PLAN_META[c.plan].label}
             {c.rfc ? ` · RFC ${c.rfc}` : ''}
           </p>
@@ -283,8 +283,8 @@ function CompanyPanel({ company: c }: { company: Company }) {
           ['Alertas / día', (c.alertsPerDay ?? 0).toFixed(1)],
         ].map(([label, value], i) => (
           <div key={label} className={clsx('px-3 py-2.5', i > 0 && 'border-l border-line')}>
-            <p className="text-[9px] font-semibold tracking-[0.5px] text-muted uppercase">{label}</p>
-            <p className="mt-0.5 font-mono text-[13px] font-bold text-ink">{value}</p>
+            <p className="text-[11px] font-semibold tracking-[0.5px] text-muted uppercase">{label}</p>
+            <p className="mt-0.5 font-mono text-[15px] font-bold text-ink">{value}</p>
           </div>
         ))}
       </div>
@@ -295,12 +295,12 @@ function CompanyPanel({ company: c }: { company: Company }) {
           <div className="mt-2 rounded-[5px] border border-line p-3">
             {c.gps.provider ? (
               <>
-                <div className="flex items-center justify-between text-[12px]">
+                <div className="flex items-center justify-between text-[14px]">
                   <span className="flex items-center gap-1.5 font-medium text-ink">
                     <Dot className={SYNC_DOT[c.sync.status]} />
                     {c.gps.provider} · {c.sync.status === 'error' ? 'con falla' : c.sync.status === 'delayed' ? 'con retraso' : 'conectado'}
                   </span>
-                  <span className={clsx('text-[10px]', c.sync.status === 'error' ? 'text-crit' : 'text-muted')}>
+                  <span className={clsx('text-[12px]', c.sync.status === 'error' ? 'text-crit' : 'text-muted')}>
                     {c.sync.at ? `Última sync ${fmtAgo(c.sync.at, now).toLowerCase()}` : c.sync.label}
                   </span>
                 </div>
@@ -321,7 +321,7 @@ function CompanyPanel({ company: c }: { company: Company }) {
               </>
             ) : (
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[12px] text-crit">
+                <span className="flex items-center gap-1.5 text-[14px] text-crit">
                   <Dot className="bg-crit" /> Sin GPS conectado
                 </span>
                 <Button size="sm" onClick={() => soon('Conectar la plataforma GPS de la empresa.')}>
@@ -329,7 +329,7 @@ function CompanyPanel({ company: c }: { company: Company }) {
                 </Button>
               </div>
             )}
-            <button type="button" onClick={() => soon('Agregar integraciones de candados o telemetría.')} className="mt-3 text-[11px] font-medium text-primary hover:underline">
+            <button type="button" onClick={() => soon('Agregar integraciones de candados o telemetría.')} className="mt-3 text-[13px] font-medium text-primary hover:underline">
               + agregar integración (candados, telemetría de temperatura)
             </button>
           </div>
@@ -353,12 +353,12 @@ function CompanyPanel({ company: c }: { company: Company }) {
           <p className="label-section">Contactos</p>
           <ul className="mt-2 flex flex-col gap-2">
             {c.contacts.map((p) => (
-              <li key={p.name} className="flex items-center justify-between text-[12px]">
+              <li key={p.name} className="flex items-center justify-between text-[14px]">
                 <span>
                   <span className="font-medium text-ink">{p.name}</span>
-                  <span className="block text-[10px] text-muted">{p.role}</span>
+                  <span className="block text-[12px] text-muted">{p.role}</span>
                 </span>
-                <span className="font-mono text-[11px] text-body">{p.phone}</span>
+                <span className="font-mono text-[13px] text-body">{p.phone}</span>
               </li>
             ))}
           </ul>
@@ -413,8 +413,8 @@ function CompanyPanel({ company: c }: { company: Company }) {
 function Metric({ label, value, crit }: { label: string; value: string; crit?: boolean }) {
   return (
     <div>
-      <p className="text-[9px] font-semibold tracking-[0.5px] text-muted uppercase">{label}</p>
-      <p className={clsx('font-mono text-[13px] font-bold', crit ? 'text-crit' : 'text-ink')}>{value}</p>
+      <p className="text-[11px] font-semibold tracking-[0.5px] text-muted uppercase">{label}</p>
+      <p className={clsx('font-mono text-[15px] font-bold', crit ? 'text-crit' : 'text-ink')}>{value}</p>
     </div>
   );
 }

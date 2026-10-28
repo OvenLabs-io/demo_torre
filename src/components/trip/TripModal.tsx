@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { Trip } from '@/types/domain';
-import { useStore } from '@/store/useStore';
+import { useCan, useStore } from '@/store/useStore';
+import { crewName } from '@/mocks/crew';
 import { useNow } from '@/sim/clock';
 import { SEVERITY_LABEL } from '@/lib/severity';
 import { legText, movementLong, stopSentence } from '@/lib/tripView';
@@ -29,20 +30,29 @@ export function TripModalHost() {
 function TripModal({ trip, tab, onClose }: { trip: Trip; tab: TripTab; onClose: () => void }) {
   const { open, at } = useTripModal();
   const now = useNow();
+  const canHistory = useCan('history');
   const client = useStore((s) => s.clients.find((c) => c.id === trip.clientId));
-  const openAlerts = useStore((s) => s.alerts.filter((a) => a.tripId === trip.id && a.status !== 'closed').length);
+  const driver = useStore((s) => s.crew.find((c) => c.id === trip.driverId));
+  const unit = useStore((s) => s.units.find((u) => u.id === trip.unitId));
   const stop = stopSentence(trip, now);
   const c0 = trip.containers[0];
+  const movement = movementLong(trip);
+  const current: TripTab = tab === 'historial' && !canHistory ? 'bitacora' : tab;
+  const context = client
+    ? [client.name, c0?.shippingLine, trip.booking]
+    : [trip.carrier, unit?.economic, driver ? crewName(driver) : undefined];
 
   const header = (
     <div className="shrink-0 border-b border-line px-5 pt-4">
       <div className="flex items-center gap-3">
-        <h2 className="font-mono text-[18px] font-bold text-ink">{trip.id}</h2>
-        <Chip tone="primary" className="text-[9px] tracking-[0.3px]">
-          {movementLong(trip)}
-          {trip.modality === 'full' ? ' · FULL' : ''}
-        </Chip>
-        <span className="flex items-center gap-1.5 text-[12px] text-body">
+        <h2 className="font-mono text-[20px] font-bold text-ink">{trip.id}</h2>
+        {movement && (
+          <Chip tone="primary" className="text-[11px] tracking-[0.3px]">
+            {movement}
+            {trip.modality === 'full' ? ' · FULL' : ''}
+          </Chip>
+        )}
+        <span className="flex items-center gap-1.5 text-[14px] text-body">
           <Dot className="bg-primary" size={7} />
           {trip.phaseLabel} · {legText(trip)}
         </span>
@@ -53,22 +63,17 @@ function TripModal({ trip, tab, onClose }: { trip: Trip; tab: TripTab; onClose: 
           </SeverityChip>
         )}
         <div className="flex-1" />
-        <span className="truncate text-[11px] text-muted">
-          {client?.name} · {c0?.shippingLine} · {trip.booking}
-        </span>
+        <span className="truncate text-[13px] text-muted">{context.filter(Boolean).join(' · ')}</span>
         <CloseButton onClick={onClose} />
       </div>
-      <Tabs<TripTab | 'eir' | 'docs' | 'escort' | 'alerts'>
+      <Tabs<TripTab>
         className="mt-3 border-b-0"
-        value={tab}
-        onChange={(k) => (k === 'bitacora' || k === 'historial') && open(trip.id, k)}
+        value={current}
+        onChange={(k) => open(trip.id, k)}
         items={[
-          { key: 'bitacora', label: 'Bitácora e información', count: trip.log.length },
-          { key: 'historial', label: 'Historial del viaje' },
-          { key: 'eir', label: 'Contenedor y EIR', count: 1, disabled: true, title: 'Próximamente' },
-          { key: 'docs', label: 'Documentos', count: 3, disabled: true, title: 'Próximamente' },
-          { key: 'escort', label: 'Custodia', disabled: true, title: 'Próximamente' },
-          { key: 'alerts', label: 'Alertas', count: openAlerts, disabled: true, title: 'Próximamente' },
+          { key: 'bitacora', label: 'Bitácora', count: trip.log.length },
+          { key: 'info', label: 'Información del viaje' },
+          ...(canHistory ? [{ key: 'historial' as const, label: 'Historial del viaje' }] : []),
         ]}
       />
     </div>
@@ -76,18 +81,17 @@ function TripModal({ trip, tab, onClose }: { trip: Trip; tab: TripTab; onClose: 
 
   return (
     <Modal open onClose={onClose} header={header} width={1240} height="min(880px, calc(100vh - 32px))" bodyClassName="p-0" label={`Viaje ${trip.id}`}>
-      {tab === 'bitacora' ? (
-        <div className="flex h-full min-h-0">
-          <div className="scrollbar-thin min-w-0 flex-1 overflow-auto bg-surface-alt p-5">
-            <TripLogPanel trip={trip} />
-          </div>
-          <div className="scrollbar-thin w-[420px] shrink-0 overflow-auto border-l border-line bg-white p-5">
-            <TripInfoForm key={trip.id} trip={trip} onClosed={onClose} />
-          </div>
+      {current === 'bitacora' && (
+        <div className="scrollbar-thin h-full overflow-auto bg-surface-alt p-5">
+          <TripLogPanel trip={trip} />
         </div>
-      ) : (
-        <TripHistoryTab key={trip.id} trip={trip} initialAt={at} />
       )}
+      {current === 'info' && (
+        <div className="scrollbar-thin h-full overflow-auto bg-surface-alt p-5">
+          <TripInfoForm key={trip.id} trip={trip} onClosed={onClose} />
+        </div>
+      )}
+      {current === 'historial' && <TripHistoryTab key={trip.id} trip={trip} initialAt={at} />}
     </Modal>
   );
 }

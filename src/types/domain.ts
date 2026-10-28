@@ -29,7 +29,11 @@ export type LegKind =
   | 'client_loading'
   | 'terminal_delivery'
   | 'empty_pickup'
-  | 'empty_return';
+  | 'empty_return'
+  /** Simple route from "Nuevo viaje": salida → paradas → destino. */
+  | 'departure'
+  | 'stop'
+  | 'arrival';
 
 /** Tramo → TripLeg */
 export interface TripLeg {
@@ -52,8 +56,8 @@ export interface LogEntry {
   title: string;
   author: string;
   meta?: string;
-  /** url = local preview of a chosen file; no url = mock thumbnail. size in bytes. */
-  photos: { id: string; url?: string; size?: number }[];
+  /** Evidencias (fotos o documentos). url = local preview of a chosen file; no url = mock thumbnail. size in bytes. */
+  photos: { id: string; url?: string; size?: number; name?: string; kind?: 'image' | 'document' }[];
   position?: LatLng;
 }
 
@@ -76,7 +80,8 @@ export type Movement = 'IMP' | 'EXP' | 'LOC';
 
 export interface Trip {
   id: string;
-  movement: Movement;
+  /** Not captured in the simplified "Nuevo viaje". */
+  movement?: Movement;
   modality: 'single' | 'full';
   clientId: string;
   booking?: string;
@@ -86,6 +91,12 @@ export interface Trip {
   unitId: string;
   driverId: string;
   chassis?: string;
+  /** Up to 2 trailers (Nuevo viaje). Older trips only have `chassis`. */
+  trailers?: string[];
+  /** Línea transportista. */
+  carrier?: string;
+  notes?: string;
+  georouteId?: string;
   lock: { id: string; state: 'closed' | 'open'; batteryPct?: number };
   escort: { required: boolean; escortId?: string; provider?: string; legIndexes?: number[] };
   legs: TripLeg[];
@@ -116,10 +127,32 @@ export interface Trip {
   createdAt: number;
 }
 
+/** Georuta: personalized route (geofences in order + allowed corridor) reused by trips. */
+export interface Georoute {
+  id: string;
+  name: string;
+  /** Geofence ids in order: salida, paradas…, destino. */
+  stops: string[];
+  /** Allowed deviation from the path before R-05 fires. */
+  widthM: number;
+  notes?: string;
+  updatedAt: number;
+}
+
+/** Remolque / chasis */
+export interface Trailer {
+  id: string;
+  kind: 'Chasis' | 'Caja seca' | 'Plataforma';
+  size: '20 pies' | '40 pies' | '53 pies';
+  plate: string;
+  base: 'Manzanillo' | 'Guadalajara';
+  status: 'available' | 'maintenance';
+}
+
 /** Fila de Historial (viaje cerrado, resumen ligero) */
 export interface HistoryTrip {
   id: string;
-  movement: Movement;
+  movement?: Movement;
   clientId: string;
   container: string;
   terminal: string;
@@ -132,6 +165,8 @@ export interface HistoryTrip {
   status: Exclude<TripStatus, 'active'>;
   demurrageMxn: number;
   onTime: boolean;
+  /** Full bitácora, kept for trips closed in this session. */
+  log?: LogEntry[];
 }
 
 /** Unidad (tracto, viene del GPS) */
@@ -277,8 +312,7 @@ export type Module =
   | 'fleet'
   | 'catalogs'
   | 'rules'
-  | 'users'
-  | 'integrations';
+  | 'users';
 export type Action = 'view' | 'create' | 'edit' | 'delete' | 'export';
 export type PermissionMatrix = Record<Module, Record<Action, boolean>>;
 export type RoleKey = 'traffic_manager' | 'admin' | 'monitor' | 'monitor_night' | 'account_exec';

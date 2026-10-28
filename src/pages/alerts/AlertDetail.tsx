@@ -48,7 +48,7 @@ export function AlertDetail({ alert: a }: { alert: Alert }) {
       'Viaje',
       trip ? (
         <button type="button" onClick={() => openTrip(trip.id)} className="font-mono text-primary hover:underline">
-          {trip.id} · {movementTag(trip)}
+          {[trip.id, movementTag(trip)].filter(Boolean).join(' · ')}
         </button>
       ) : (
         <span className="font-mono">{a.tripId} · cerrado</span>
@@ -74,11 +74,11 @@ export function AlertDetail({ alert: a }: { alert: Alert }) {
       {/* Band */}
       <div className={clsx('shrink-0 border-b border-line px-4 py-3', BAND[a.severity])}>
         <div className="flex items-center gap-2.5">
-          <span className={clsx('rounded-[3px] px-1.5 py-px text-[9px] font-bold tracking-[0.5px] text-white uppercase', SEVERITY_STYLE[a.severity].dot)}>
+          <span className={clsx('rounded-[3px] px-1.5 py-px text-[11px] font-bold tracking-[0.5px] text-white uppercase', SEVERITY_STYLE[a.severity].dot)}>
             {SEVERITY_LABEL[a.severity]}
           </span>
-          <h2 className="min-w-0 flex-1 truncate text-[15px] font-bold text-ink">{a.headline ?? a.title}</h2>
-          <span className={clsx('font-mono text-[11px] font-bold whitespace-nowrap', closed ? 'text-ok-text' : sla.overdue ? 'text-crit' : 'text-body')}>
+          <h2 className="min-w-0 flex-1 truncate text-[17px] font-bold text-ink">{a.headline ?? a.title}</h2>
+          <span className={clsx('font-mono text-[13px] font-bold whitespace-nowrap', closed ? 'text-ok-text' : sla.overdue ? 'text-crit' : 'text-body')}>
             {closed
               ? `Cerrada ${fmtTimeH(a.closure!.at)} · ${a.closure!.reason}`
               : sla.overdue
@@ -107,8 +107,8 @@ export function AlertDetail({ alert: a }: { alert: Alert }) {
             {[...a.timeline]
               .sort((x, y) => y.at - x.at)
               .map((e, i) => (
-                <li key={i} className="flex gap-2.5 text-[11px]">
-                  <span className="w-9 shrink-0 font-mono text-[10px] text-muted">{fmtTime(e.at)}</span>
+                <li key={i} className="flex gap-2.5 text-[13px]">
+                  <span className="w-9 shrink-0 font-mono text-[12px] text-muted">{fmtTime(e.at)}</span>
                   <span className="text-body">{e.text}</span>
                 </li>
               ))}
@@ -116,22 +116,22 @@ export function AlertDetail({ alert: a }: { alert: Alert }) {
           {rule && (
             <>
               <p className="label-section mt-5">Regla que la generó</p>
-              <p className="mt-1.5 text-[11px] text-body">
+              <p className="mt-1.5 text-[13px] text-body">
                 <Link to="/admin/reglas" className="font-mono font-bold text-primary hover:underline">
                   {rule.id}
                 </Link>{' '}
                 · {rule.name} · {SEVERITY_LABEL[rule.severity]} · SLA {fmtSla(rule.slaMinutes)}
               </p>
-              <p className="mt-1 text-[10px] text-muted">{rule.conditionText}</p>
+              <p className="mt-1 text-[12px] text-muted">{rule.conditionText}</p>
             </>
           )}
           {closed && a.closure && (
             <>
               <p className="label-section mt-5">Cierre</p>
-              <p className="mt-1.5 text-[11px] text-body">
+              <p className="mt-1.5 text-[13px] text-body">
                 {a.closure.reason} · {userName(users, a.closure.byUserId)} · {fmtTimeH(a.closure.at)}
               </p>
-              {a.closure.comment && <p className="mt-1 text-[11px] text-muted">“{a.closure.comment}”</p>}
+              {a.closure.comment && <p className="mt-1 text-[13px] text-muted">“{a.closure.comment}”</p>}
             </>
           )}
         </aside>
@@ -143,8 +143,8 @@ export function AlertDetail({ alert: a }: { alert: Alert }) {
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-[9px] font-semibold tracking-[0.5px] text-muted uppercase">{label}</p>
-      <div className="mt-0.5 text-[12px] text-ink">{value}</div>
+      <p className="text-[11px] font-semibold tracking-[0.5px] text-muted uppercase">{label}</p>
+      <div className="mt-0.5 text-[14px] text-ink">{value}</div>
     </div>
   );
 }
@@ -158,7 +158,7 @@ function AlertMap({ alert: a }: { alert: Alert }) {
 
   if (!loc) {
     return (
-      <div className="flex h-[120px] shrink-0 items-center justify-center gap-2 border-b border-line bg-surface-alt text-[11px] text-muted">
+      <div className="flex h-[120px] shrink-0 items-center justify-center gap-2 border-b border-line bg-surface-alt text-[13px] text-muted">
         <MapPin size={14} className="text-faint" />
         Esta alerta no tiene ubicación (vigencia de documentos).
       </div>
@@ -189,7 +189,7 @@ function AlertMap({ alert: a }: { alert: Alert }) {
           );
         })}
       </BaseMap>
-      <div className="absolute top-2.5 left-2.5 z-[500] flex max-w-[70%] items-center gap-1.5 rounded-[4px] border border-line bg-white px-2.5 py-1.5 text-[11px] text-body shadow-sm">
+      <div className="absolute top-2.5 left-2.5 z-[500] flex max-w-[70%] items-center gap-1.5 rounded-[4px] border border-line bg-white px-2.5 py-1.5 text-[13px] text-body shadow-sm">
         <MapPin size={13} className="shrink-0 text-crit/60" />
         <span className="truncate">
           {loc.label}
@@ -204,7 +204,7 @@ function ProtocolPanel({ alert: a }: { alert: Alert }) {
   const rules = useStore((s) => s.rules);
   const protocols = useStore((s) => s.protocols);
   const driver = useStore((s) => s.crew.find((c) => c.id === (s.trips.find((t) => t.id === a.tripId)?.driverId ?? a.crewId)));
-  const { completeAlertStep, addAlertAction, escalateAlert } = useStore();
+  const { completeAlertStep, addAlertAction } = useStore();
   const { protocol, steps } = alertSteps(a, rules, protocols);
   const done = steps.filter((s) => s.done).length;
   const firstPending = steps.find((s) => !s.done);
@@ -226,13 +226,13 @@ function ProtocolPanel({ alert: a }: { alert: Alert }) {
         <div className="flex items-center justify-between">
           <p className="label-section">Protocolo de atención{protocol ? ` · ${protocol.name}` : ''}</p>
           {protocol && (
-            <span className="text-[11px] text-muted">
+            <span className="text-[13px] text-muted">
               {done} de {steps.length} completados
             </span>
           )}
         </div>
         {!protocol && (
-          <p className="mt-3 rounded-[4px] bg-surface-alt px-3 py-3 text-[11px] text-muted">
+          <p className="mt-3 rounded-[4px] bg-surface-alt px-3 py-3 text-[13px] text-muted">
             La regla {a.ruleId} no tiene protocolo asignado. Registra la acción tomada y cierra con motivo.
           </p>
         )}
@@ -247,13 +247,13 @@ function ProtocolPanel({ alert: a }: { alert: Alert }) {
                   <Check size={13} strokeWidth={3} />
                 </span>
               ) : (
-                <span className="flex size-[22px] shrink-0 items-center justify-center rounded-full border border-faint bg-white font-mono text-[11px] text-body">
+                <span className="flex size-[22px] shrink-0 items-center justify-center rounded-full border border-faint bg-white font-mono text-[13px] text-body">
                   {s.index}
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className={clsx('text-[12px]', s.done ? 'text-muted' : 'font-medium text-ink')}>{s.step?.title ?? `Paso ${s.index}`}</p>
-                <p className="text-[10px] text-muted">
+                <p className={clsx('text-[14px]', s.done ? 'text-muted' : 'font-medium text-ink')}>{s.step?.title ?? `Paso ${s.index}`}</p>
+                <p className="text-[12px] text-muted">
                   {s.done
                     ? `Hecho · ${fmtTime(s.doneAt!)}${s.note ? ` · ${s.note}` : ''}`
                     : `Pendiente${s.step?.sendsMessage ? ' · plantilla WhatsApp lista' : ''}${s.step ? ` · ${s.step.owner} · máx. ${s.step.maxMinutes} min` : ''}`}
@@ -284,7 +284,7 @@ function ProtocolPanel({ alert: a }: { alert: Alert }) {
                 if (e.key === 'Escape') setNoting(false);
               }}
               placeholder="¿Qué se hizo? (queda como evidencia)"
-              className="h-[30px] min-w-0 flex-1 rounded-[4px] border border-input px-2.5 text-[12px] focus:border-primary focus:outline-none"
+              className="h-[34px] min-w-0 flex-1 rounded-[4px] border border-input px-2.5 text-[14px] focus:border-primary focus:outline-none"
             />
             <Button variant="primary" onClick={saveNote} disabled={!note.trim()}>
               Guardar
@@ -292,7 +292,7 @@ function ProtocolPanel({ alert: a }: { alert: Alert }) {
           </div>
         )}
         {(a.actions?.length ?? 0) > 0 && (
-          <p className="mt-2 text-[10px] text-muted">
+          <p className="mt-2 text-[12px] text-muted">
             {a.actions!.length} {a.actions!.length === 1 ? 'acción registrada' : 'acciones registradas'} como evidencia
           </p>
         )}
@@ -311,16 +311,8 @@ function ProtocolPanel({ alert: a }: { alert: Alert }) {
             Llamar operador
           </Button>
           <div className="flex-1" />
+          {/* "Escalar" se retiró hasta definir bien el flujo de escalamiento. */}
           <CloseMenu alert={a} />
-          <Button
-            variant="danger"
-            onClick={() => {
-              escalateAlert(a.id);
-              toast.error('Alerta escalada a seguridad', { description: 'Se notificó al jefe de seguridad y al jefe de tráfico.' });
-            }}
-          >
-            Escalar
-          </Button>
         </div>
       )}
     </div>
@@ -357,7 +349,7 @@ function CloseMenu({ alert: a }: { alert: Alert }) {
           <p className="label-section">Motivo de cierre</p>
           <div className="mt-2 flex flex-col gap-1">
             {CLOSE_REASONS.map((r) => (
-              <label key={r} className="flex cursor-pointer items-center gap-2 rounded-[3px] px-1.5 py-1 text-[12px] hover:bg-line-soft">
+              <label key={r} className="flex cursor-pointer items-center gap-2 rounded-[3px] px-1.5 py-1 text-[14px] hover:bg-line-soft">
                 <input
                   type="radio"
                   name="close-reason"
@@ -377,9 +369,9 @@ function CloseMenu({ alert: a }: { alert: Alert }) {
             onChange={(e) => setComment(e.target.value)}
             placeholder="Comentario (opcional)"
             rows={2}
-            className="mt-2 w-full resize-none rounded-[4px] border border-input px-2 py-1.5 text-[12px] focus:border-primary focus:outline-none"
+            className="mt-2 w-full resize-none rounded-[4px] border border-input px-2 py-1.5 text-[14px] focus:border-primary focus:outline-none"
           />
-          {error && <p className="mt-1.5 text-[10px] text-crit">{error}</p>}
+          {error && <p className="mt-1.5 text-[12px] text-crit">{error}</p>}
           <div className="mt-2 flex justify-end gap-2">
             <Button size="sm" onClick={() => setOpen(false)}>
               Cancelar
@@ -404,15 +396,15 @@ function Assignee({ alert: a }: { alert: Alert }) {
       <p className="label-section">Atendida por</p>
       {user ? (
         <div className="mt-2 flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">{user.initials}</span>
+          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-white">{user.initials}</span>
           <div>
-            <p className="text-[12px] font-semibold text-ink">{user.name}</p>
-            {a.takenAt && <p className="text-[10px] text-muted">Tomó la alerta {fmtTimeH(a.takenAt)}</p>}
+            <p className="text-[14px] font-semibold text-ink">{user.name}</p>
+            {a.takenAt && <p className="text-[12px] text-muted">Tomó la alerta {fmtTimeH(a.takenAt)}</p>}
           </div>
         </div>
       ) : (
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-[12px] text-muted">Sin asignar</span>
+          <span className="text-[14px] text-muted">Sin asignar</span>
           <Button
             size="sm"
             variant="primary"

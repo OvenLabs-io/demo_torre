@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/Field';
 import { KpiStrip } from '@/components/ui/KpiStrip';
 import { Pagination } from '@/components/ui/Pagination';
 import { Dot } from '@/components/ui/Chip';
+import { HistoryTripModal } from './HistoryTripModal';
 
 const PAGE_SIZE = 20;
 const TERMINALS = ['CONTECON', 'SSA México', 'TIMSA', 'OCUPA'];
@@ -48,6 +49,7 @@ export function HistoryPage() {
   const [driver, setDriver] = useState('');
   const [incidents, setIncidents] = useState('');
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<HistoryTrip | null>(null);
 
   const drivers = useMemo(() => [...new Set(history.map((h) => h.driverShort))].sort(), [history]);
   const clientName = (id: string) => clients.find((c) => c.id === id)?.name ?? '—';
@@ -91,7 +93,7 @@ export function HistoryPage() {
       ['Viaje', 'Tipo', 'Cliente', 'Contenedor', 'Terminal', 'Tracto', 'Operador', 'Inicio', 'Cierre', 'Espera terminal (min)', 'Incidencias', 'Estado', 'Demora naviera (MXN)', 'A tiempo'],
       filtered.map((h) => [
         h.id,
-        h.movement,
+        h.movement ?? '—',
         clientName(h.clientId),
         h.container,
         h.terminal,
@@ -131,7 +133,7 @@ export function HistoryPage() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar viaje, contenedor, tracto…"
             aria-label="Buscar viaje, contenedor o tracto"
-            className="h-[30px] w-full rounded-[4px] border border-input bg-white pr-2 pl-8 text-[12px] placeholder:text-faint focus:border-primary focus:outline-none"
+            className="h-[34px] w-full rounded-[4px] border border-input bg-white pr-2 pl-8 text-[14px] placeholder:text-faint focus:border-primary focus:outline-none"
           />
         </div>
         <Select className="w-[200px]" value={range} onChange={(e) => setRange(e.target.value as RangeKey)} options={rangeOptions} aria-label="Fechas" />
@@ -175,7 +177,7 @@ export function HistoryPage() {
           ]}
         />
         <div className="flex-1" />
-        <span className="text-[11px] text-muted">
+        <span className="text-[13px] text-muted">
           {filtered.length} viajes · {page} de {pages}
         </span>
       </div>
@@ -184,19 +186,19 @@ export function HistoryPage() {
 
       <div className="overflow-hidden rounded-md border border-line bg-white">
         <div className="scrollbar-thin overflow-x-auto">
-          <table className="w-full min-w-[1300px] table-fixed border-collapse text-[12px]">
+          <table className="w-full min-w-[1540px] table-fixed border-collapse text-[14px] [&_td]:whitespace-nowrap">
             <thead>
               <tr>
-                <th className="th w-[124px]">Viaje</th>
+                <th className="th w-[150px]">Viaje</th>
                 <th className="th w-[60px]">Tipo</th>
-                <th className="th w-[180px]">Cliente</th>
-                <th className="th w-[120px]">Contenedor</th>
-                <th className="th w-[100px]">Terminal</th>
-                <th className="th w-[170px]">Tracto · operador</th>
-                <th className="th w-[110px]">Inicio</th>
-                <th className="th w-[110px]">Cierre</th>
-                <th className="th w-[110px]">Espera terminal</th>
-                <th className="th w-[90px]">Incidencias</th>
+                <th className="th w-[210px]">Cliente</th>
+                <th className="th w-[130px]">Contenedor</th>
+                <th className="th w-[110px]">Terminal</th>
+                <th className="th w-[190px]">Tracto · operador</th>
+                <th className="th w-[120px]">Inicio</th>
+                <th className="th w-[120px]">Cierre</th>
+                <th className="th w-[140px]">Espera terminal</th>
+                <th className="th w-[110px]">Incidencias</th>
                 <th className="th">Estado</th>
               </tr>
             </thead>
@@ -209,18 +211,25 @@ export function HistoryPage() {
                 </tr>
               )}
               {rows.map((h) => (
-                <tr key={h.id} className="h-[38px] border-b border-line-soft hover:bg-surface-alt">
+                <tr
+                  key={h.id}
+                  tabIndex={0}
+                  onClick={() => setSelected(h)}
+                  onKeyDown={(e) => e.key === 'Enter' && setSelected(h)}
+                  title="Ver detalle del viaje"
+                  className="h-[42px] cursor-pointer border-b border-line-soft hover:bg-surface-alt focus-visible:bg-surface-alt focus-visible:outline-none"
+                >
                   <td className="px-3 font-mono font-bold text-primary">{h.id}</td>
-                  <td className="px-3 text-body">{h.movement}</td>
+                  <td className="px-3 text-body">{h.movement ?? '—'}</td>
                   <td className="truncate px-3 text-ink">{clientName(h.clientId)}</td>
-                  <td className="truncate px-3 font-mono text-[11px]">{h.container}</td>
+                  <td className="truncate px-3 font-mono text-[13px]">{h.container}</td>
                   <td className="px-3 text-body">{h.terminal}</td>
                   <td className="truncate px-3 text-body">
                     {h.unitEconomic} · {h.driverShort}
                   </td>
-                  <td className="px-3 font-mono text-[11px] text-body">{fmtDateTime(h.startedAt)}</td>
-                  <td className="px-3 font-mono text-[11px] text-body">{fmtDateTime(h.closedAt)}</td>
-                  <td className={clsx('px-3 font-mono text-[11px]', h.terminalWaitMin > 180 ? 'font-bold text-crit' : 'text-body')}>
+                  <td className="px-3 font-mono text-[13px] text-body">{fmtDateTime(h.startedAt)}</td>
+                  <td className="px-3 font-mono text-[13px] text-body">{fmtDateTime(h.closedAt)}</td>
+                  <td className={clsx('px-3 font-mono text-[13px]', h.terminalWaitMin > 180 ? 'font-bold text-crit' : 'text-body')}>
                     {fmtDuration(h.terminalWaitMin, true)}
                   </td>
                   <td className={clsx('px-3 font-mono', h.incidents > 0 ? 'font-bold text-high' : 'text-faint')}>{h.incidents}</td>
@@ -235,13 +244,15 @@ export function HistoryPage() {
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between border-t border-line-soft bg-surface-alt px-3.5 py-2.5 text-[11px] text-muted">
+        <div className="flex items-center justify-between border-t border-line-soft bg-surface-alt px-3.5 py-2.5 text-[13px] text-muted">
           <span>
-            Mostrando {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
+            Clic en un viaje para ver su detalle · Mostrando {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
           </span>
           <Pagination page={page} pages={pages} onChange={setPage} />
         </div>
       </div>
+
+      {selected && <HistoryTripModal trip={selected} statusMeta={STATUS_META[selected.status]} onClose={() => setSelected(null)} />}
     </div>
   );
 }

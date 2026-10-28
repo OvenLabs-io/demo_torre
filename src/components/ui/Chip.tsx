@@ -29,7 +29,7 @@ export function Chip({
   return (
     <span
       className={clsx(
-        'inline-flex items-center whitespace-nowrap rounded-[3px] px-1.5 py-px text-[10px] font-medium leading-[1.4]',
+        'inline-flex items-center whitespace-nowrap rounded-[3px] px-1.5 py-px text-[12px] font-medium leading-[1.4]',
         mono && 'font-mono',
         TONES[tone],
         className,
@@ -45,7 +45,7 @@ export function SeverityChip({ severity, children, className }: { severity: Seve
   return (
     <span
       className={clsx(
-        'inline-flex items-center whitespace-nowrap rounded-[3px] px-1.5 py-px text-[10px] font-medium leading-[1.4]',
+        'inline-flex items-center whitespace-nowrap rounded-[3px] px-1.5 py-px text-[12px] font-medium leading-[1.4]',
         s.bg,
         s.text,
         className,

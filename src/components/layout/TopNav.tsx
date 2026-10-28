@@ -14,6 +14,8 @@ export function TopNav() {
   const [openKey, setOpenKey] = useState<string | null>(null);
   const navRef = useDismiss(openKey !== null, () => setOpenKey(null));
   const openAlerts = useStore((s) => s.alerts.filter((a) => a.status === 'open').length);
+  const permissions = useStore((s) => s.users.find((u) => u.id === s.currentUserId)?.permissions);
+  const items = NAV.filter((item) => permissions?.[item.module][item.action ?? 'view']);
 
   // Close dropdowns when navigating.
   useEffect(() => setOpenKey(null), [location.pathname, location.search]);
@@ -21,17 +23,17 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-[500] flex h-[52px] shrink-0 items-center gap-1 bg-primary px-5 text-white">
       <Link to="/" className="flex shrink-0 items-center gap-2 pr-5" aria-label={`${brand.name} · inicio`}>
-        <span className="flex size-[26px] items-center justify-center rounded-[5px] bg-white/15 text-[10px] font-bold">
+        <span className="flex size-[26px] items-center justify-center rounded-[5px] bg-white/15 text-[12px] font-bold">
           {brand.initials}
         </span>
         <span className="flex flex-col leading-[1.3]">
-          <span className="text-[13px] font-bold">{brand.name}</span>
-          <span className="text-[9px] opacity-60">{TENANT_NAME}</span>
+          <span className="text-[15px] font-bold">{brand.name}</span>
+          <span className="text-[11px] opacity-60">{TENANT_NAME}</span>
         </span>
       </Link>
 
       <nav ref={navRef} className="flex h-full items-center" aria-label="Menú principal">
-        {NAV.map((item) => (
+        {items.map((item) => (
           <TopNavItem
             key={item.key}
             item={item}
@@ -51,12 +53,12 @@ export function TopNav() {
 
       <div className="flex shrink-0 items-center gap-1.5 px-3" title="Datos GPS en vivo">
         <span className="size-2 animate-live-pulse rounded-full bg-live-nav" />
-        <span className="text-[11px] font-semibold">En vivo</span>
+        <span className="text-[13px] font-semibold">En vivo</span>
       </div>
 
       <Link
         to="/alertas"
-        className="relative flex size-[30px] shrink-0 items-center justify-center rounded-[4px] text-white/70 hover:bg-white/10 hover:text-white"
+        className="relative flex size-[34px] shrink-0 items-center justify-center rounded-[4px] text-white/70 hover:bg-white/10 hover:text-white"
         aria-label={`Alertas abiertas: ${openAlerts}`}
         title="Alertas"
       >
@@ -89,11 +91,11 @@ function TopNavItem({
   const navigate = useNavigate();
   const content = (
     <>
-      <span className={clsx('text-[12px]', active ? 'font-semibold opacity-100' : 'font-medium opacity-75 group-hover:opacity-100')}>
+      <span className={clsx('text-[14px]', active ? 'font-semibold opacity-100' : 'font-medium opacity-75 group-hover:opacity-100')}>
         {item.label}
       </span>
       {badge !== undefined && badge > 0 && (
-        <span className="rounded-lg bg-crit px-[5px] py-px text-[9px] leading-[1.3] font-bold">{badge}</span>
+        <span className="rounded-lg bg-crit px-[5px] py-px text-[11px] leading-[1.3] font-bold">{badge}</span>
       )}
       {item.children && <ChevronDown size={11} className="opacity-60" />}
       <span className={clsx('absolute right-3 bottom-[1px] left-3 h-0.5 bg-white', active ? 'opacity-100' : 'opacity-0')} />
@@ -120,7 +122,7 @@ function TopNavItem({
           className="absolute top-[48px] left-0 z-50 flex min-w-[240px] flex-col gap-0.5 rounded-[5px] border border-line bg-white p-1.5 text-ink shadow-pop"
         >
           {item.children.map((child) => {
-            const isCurrent = child.to === currentPath || (child.to === '/' && currentPath === '/' && child.label === 'Vista Lista');
+            const isCurrent = child.to === currentPath;
             const Icon = child.icon;
             return (
               <button
@@ -132,7 +134,7 @@ function TopNavItem({
                   navigate(child.to);
                 }}
                 className={clsx(
-                  'flex items-center gap-2 rounded-[3px] px-2.5 py-2 text-left text-[12px] hover:bg-line-soft',
+                  'flex items-center gap-2 rounded-[3px] px-2.5 py-2 text-left text-[14px] hover:bg-line-soft',
                   isCurrent && 'bg-line-soft font-medium',
                 )}
               >

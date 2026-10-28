@@ -20,18 +20,18 @@ export function UserMenu() {
         aria-haspopup="menu"
         className="flex items-center gap-2 rounded-[4px] py-1 pr-1 pl-2.5 hover:bg-white/10"
       >
-        <span className="flex size-7 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold">{user.initials}</span>
+        <span className="flex size-7 items-center justify-center rounded-full bg-white/20 text-[12px] font-bold">{user.initials}</span>
         <span className="flex flex-col items-start leading-[1.3]">
-          <span className="text-[11px] font-semibold">{user.name}</span>
-          <span className="text-[9px] opacity-60">{user.title}</span>
+          <span className="text-[13px] font-semibold">{user.name}</span>
+          <span className="text-[11px] opacity-60">{user.title}</span>
         </span>
         <ChevronDown size={11} className="opacity-60" />
       </button>
       {open && (
         <div role="menu" className="absolute top-[44px] right-0 z-50 w-[240px] rounded-[5px] border border-line bg-white p-1.5 text-ink shadow-pop">
           <div className="border-b border-line-soft px-2.5 pt-1 pb-2">
-            <p className="text-[12px] font-semibold">{user.name}</p>
-            <p className="text-[10px] text-muted">{user.email}</p>
+            <p className="text-[14px] font-semibold">{user.name}</p>
+            <p className="text-[12px] text-muted">{user.email}</p>
           </div>
           <button
             role="menuitem"
@@ -40,7 +40,7 @@ export function UserMenu() {
               setOpen(false);
               navigate('/consola');
             }}
-            className="mt-1 flex w-full items-center gap-2 rounded-[3px] px-2.5 py-2 text-left text-[12px] hover:bg-line-soft"
+            className="mt-1 flex w-full items-center gap-2 rounded-[3px] px-2.5 py-2 text-left text-[14px] hover:bg-line-soft"
           >
             <MonitorCog size={14} className="text-faint" />
             Cambiar a consola OvenLabs
@@ -52,7 +52,7 @@ export function UserMenu() {
               setOpen(false);
               toast('Sesión de demostración', { description: 'En el prototipo no hay inicio de sesión.' });
             }}
-            className="flex w-full items-center gap-2 rounded-[3px] px-2.5 py-2 text-left text-[12px] hover:bg-line-soft"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2.5 py-2 text-left text-[14px] hover:bg-line-soft"
           >
             <LogOut size={14} className="text-faint" />
             Cerrar sesión

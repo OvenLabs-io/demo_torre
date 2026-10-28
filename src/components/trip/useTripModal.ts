@@ -1,13 +1,14 @@
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-export type TripTab = 'bitacora' | 'historial';
+export type TripTab = 'bitacora' | 'info' | 'historial';
 
 /** The trip modal lives in the URL (?viaje=SRV-…&tab=…) so it opens over any page. */
 export function useTripModal() {
   const [params, setParams] = useSearchParams();
   const tripId = params.get('viaje');
-  const tab = (params.get('tab') as TripTab | null) ?? 'bitacora';
+  const raw = params.get('tab');
+  const tab: TripTab = raw === 'info' || raw === 'historial' ? raw : 'bitacora';
   const at = params.get('t');
 
   const open = useCallback(

@@ -173,7 +173,7 @@ export function TripHistoryTab({ trip, initialAt }: { trip: Trip; initialAt?: nu
             />
           </BaseMap>
 
-          <div className="absolute top-2.5 left-2.5 z-[500] flex items-center gap-3 rounded-[4px] border border-line bg-white px-3 py-1.5 text-[10px] text-body shadow-sm">
+          <div className="absolute top-2.5 left-2.5 z-[500] flex items-center gap-3 rounded-[4px] border border-line bg-white px-3 py-1.5 text-[12px] text-body shadow-sm">
             <Legend color="#9ca3af" label="Ruta planeada" dashed />
             <Legend color="#1e3a5f" label={`Recorrido real (hasta ${fmtTime(lastPositionAt)})`} />
             <Legend color="#b45309" label="Paradas" dot />
@@ -181,10 +181,10 @@ export function TripHistoryTab({ trip, initialAt }: { trip: Trip; initialAt?: nu
           </div>
 
           <div className="absolute bottom-3 left-3 z-[500] rounded-[4px] bg-[#242c3a] px-3 py-2 text-white shadow-lg">
-            <p className="font-mono text-[11px]">
+            <p className="font-mono text-[13px]">
               {fmtTime(t)} h · {label} · {now.speed} km/h · {compass(now.heading)}
             </p>
-            <p className="mt-0.5 max-w-[320px] truncate text-[10px] text-white/70">{current?.kind === 'position' ? describePosition(now.pos) : current?.label}</p>
+            <p className="mt-0.5 max-w-[320px] truncate text-[12px] text-white/70">{current?.kind === 'position' ? describePosition(now.pos) : current?.label}</p>
           </div>
         </div>
 
@@ -204,7 +204,7 @@ export function TripHistoryTab({ trip, initialAt }: { trip: Trip; initialAt?: nu
                 if (!playing && t >= end) setT(start);
                 setPlaying((p) => !p);
               }}
-              className="flex h-[30px] w-9 items-center justify-center rounded-[4px] bg-primary text-white hover:brightness-110"
+              className="flex h-[34px] w-9 items-center justify-center rounded-[4px] bg-primary text-white hover:brightness-110"
             >
               {playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}
             </button>
@@ -226,8 +226,8 @@ export function TripHistoryTab({ trip, initialAt }: { trip: Trip; initialAt?: nu
               ]}
             />
             <div className="ml-2 flex min-w-0 flex-col leading-tight">
-              <span className="font-mono text-[15px] font-bold whitespace-nowrap text-ink">{fmtTimeSec(t)} h</span>
-              <span className="truncate text-[10px] text-muted">
+              <span className="font-mono text-[17px] font-bold whitespace-nowrap text-ink">{fmtTimeSec(t)} h</span>
+              <span className="truncate text-[12px] text-muted">
                 {fmtDate(t, true)} · posición {currentIndex + 1} de {records.length}
               </span>
             </div>
@@ -257,15 +257,15 @@ export function TripHistoryTab({ trip, initialAt }: { trip: Trip; initialAt?: nu
             className="border-0 p-0"
           />
           <div className="flex-1" />
-          <span className="text-[10px] text-muted">{visibleRecords.length} registros</span>
+          <span className="text-[12px] text-muted">{visibleRecords.length} registros</span>
         </div>
-        <div className="grid grid-cols-[60px_1fr_70px] border-y border-line bg-surface-alt px-3 py-1.5 text-[9px] font-semibold tracking-[0.54px] text-muted uppercase">
+        <div className="grid grid-cols-[60px_1fr_70px] border-y border-line bg-surface-alt px-3 py-1.5 text-[11px] font-semibold tracking-[0.54px] text-muted uppercase">
           <span>Hora</span>
           <span>Registro</span>
           <span className="text-right">Vel.</span>
         </div>
         <RecordList records={visibleRecords} currentId={current?.id} onSeek={seek} playing={playing} />
-        <p className="border-t border-line-soft px-3 py-2 text-[10px] text-faint">Clic en una fila mueve la reproducción a ese momento</p>
+        <p className="border-t border-line-soft px-3 py-2 text-[12px] text-faint">Clic en una fila mueve la reproducción a ese momento</p>
       </div>
     </div>
   );
@@ -306,7 +306,7 @@ const RecordRow = memo(function RecordRow({ record: r, selected, onSeek }: { rec
       data-id={r.id}
       onClick={() => onSeek(r.at)}
       className={clsx(
-        'grid w-full grid-cols-[60px_1fr_70px] items-center border-b border-line-soft px-3 text-left text-[11px] hover:bg-surface-alt',
+        'grid w-full grid-cols-[60px_1fr_70px] items-center border-b border-line-soft px-3 text-left text-[13px] hover:bg-surface-alt',
         isPos ? 'h-8' : 'h-9',
         selected && 'bg-primary-soft hover:bg-primary-soft',
       )}
@@ -368,7 +368,7 @@ function TimelineSlider({
       />
       <div className="relative mt-1 h-3">
         {ticks.map((x) => (
-          <span key={x} className="absolute -translate-x-1/2 font-mono text-[9px] text-faint" style={{ left: `${((x - start) / span) * 100}%` }}>
+          <span key={x} className="absolute -translate-x-1/2 font-mono text-[11px] text-faint" style={{ left: `${((x - start) / span) * 100}%` }}>
             {fmtTime(x)}
           </span>
         ))}
@@ -384,7 +384,7 @@ function IconBtn({ label, onClick, children }: { label: string; onClick: () => v
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="flex size-[30px] items-center justify-center rounded-[4px] border border-input bg-white text-body hover:bg-surface-alt"
+      className="flex size-[34px] items-center justify-center rounded-[4px] border border-input bg-white text-body hover:bg-surface-alt"
     >
       {children}
     </button>

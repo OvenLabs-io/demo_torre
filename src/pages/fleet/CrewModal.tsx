@@ -23,11 +23,22 @@ const kindToShort = (k: string) => k.replace(' tipo ', ' ');
 const shortToKind = (k: string) => DRIVER_LICENSES.find((l) => kindToShort(l) === k) ?? DRIVER_LICENSES[0];
 
 /** "Agregar persona" (Figma 08m); also used to view/edit someone ("Ver"). */
-export function CrewModal({ member, onClose }: { member: CrewMember | null; onClose: () => void }) {
+export function CrewModal({
+  member,
+  role: fixedRole,
+  readOnly,
+  onClose,
+}: {
+  member: CrewMember | null;
+  /** Usuarios → Operadores / Custodios opens the modal for one role. */
+  role?: CrewMember['role'];
+  readOnly?: boolean;
+  onClose: () => void;
+}) {
   const units = useStore((s) => s.units);
   const upsertCrew = useStore((s) => s.upsertCrew);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [role, setRole] = useState<CrewMember['role']>(member?.role ?? 'driver');
+  const [role, setRole] = useState<CrewMember['role']>(member?.role ?? fixedRole ?? 'driver');
   const [firstName, setFirstName] = useState(member?.firstName ?? '');
   const [lastName, setLastName] = useState(member?.lastName ?? '');
   const [phone, setPhone] = useState(member?.phone ?? '');
@@ -85,28 +96,32 @@ export function CrewModal({ member, onClose }: { member: CrewMember | null; onCl
       open
       onClose={onClose}
       width={840}
-      title={member ? crewName(member) : 'Agregar persona'}
-      subtitle="Operador (conduce) o custodio (escolta). Las vigencias generan alertas R-10 al acercarse."
+      title={member ? crewName(member) : driver ? 'Agregar operador' : 'Agregar custodio'}
+      subtitle="Las vigencias generan alertas R-10 al acercarse."
       footer={
         <>
-          <span className="flex-1 text-[10px] text-crit">{error}</span>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" onClick={save}>
-            Guardar persona
-          </Button>
+          <span className="flex-1 text-[12px] text-crit">{error}</span>
+          <Button onClick={onClose}>{readOnly ? 'Cerrar' : 'Cancelar'}</Button>
+          {!readOnly && (
+            <Button variant="primary" onClick={save}>
+              {driver ? 'Guardar operador' : 'Guardar custodio'}
+            </Button>
+          )}
         </>
       }
     >
-      <div className="flex flex-col gap-4">
-        <Segmented<CrewMember['role']>
-          value={role}
-          onChange={setRole}
-          className="w-fit"
-          items={[
-            { key: 'driver', label: 'Operador' },
-            { key: 'escort', label: 'Custodio' },
-          ]}
-        />
+      <fieldset disabled={readOnly} className="flex flex-col gap-4">
+        {!fixedRole && (
+          <Segmented<CrewMember['role']>
+            value={role}
+            onChange={setRole}
+            className="w-fit"
+            items={[
+              { key: 'driver', label: 'Operador' },
+              { key: 'escort', label: 'Custodio' },
+            ]}
+          />
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Nombre(s)" required>
@@ -153,7 +168,7 @@ export function CrewModal({ member, onClose }: { member: CrewMember | null; onCl
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="flex h-[30px] items-center justify-center gap-2 rounded-[4px] border border-dashed border-input text-[11px] text-muted hover:bg-surface-alt"
+                className="flex h-[34px] items-center justify-center gap-2 rounded-[4px] border border-dashed border-input text-[13px] text-muted hover:bg-surface-alt"
               >
                 <Upload size={13} /> Licencia, apto, INE…
               </button>
@@ -162,7 +177,7 @@ export function CrewModal({ member, onClose }: { member: CrewMember | null; onCl
           {files.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {files.map((f, i) => (
-                <span key={`${f}-${i}`} className="flex items-center gap-1 rounded-[3px] bg-line-soft px-1.5 py-0.5 text-[10px] text-body">
+                <span key={`${f}-${i}`} className="flex items-center gap-1 rounded-[3px] bg-line-soft px-1.5 py-0.5 text-[12px] text-body">
                   <FileText size={11} className="text-faint" />
                   {f}
                   <button type="button" aria-label={`Quitar ${f}`} onClick={() => setFiles((x) => x.filter((_, j) => j !== i))} className="text-faint hover:text-crit">
@@ -209,7 +224,7 @@ export function CrewModal({ member, onClose }: { member: CrewMember | null; onCl
             description="Por WhatsApp al teléfono principal · para EIR, eventos y botón de pánico"
           />
         </div>
-      </div>
+      </fieldset>
     </Modal>
   );
 }

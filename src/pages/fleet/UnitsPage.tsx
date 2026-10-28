@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { RefreshCw, Search, Settings } from 'lucide-react';
+import { RefreshCw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Unit } from '@/types/domain';
-import { useStore } from '@/store/useStore';
+import { useCan, useStore } from '@/store/useStore';
 import { fmtNumber, fmtTime, normalize } from '@/lib/format';
 import { PageHeader } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/Button';
@@ -12,10 +11,10 @@ import { Chip, Dot } from '@/components/ui/Chip';
 import { Select } from '@/components/ui/Field';
 import { KpiStrip } from '@/components/ui/KpiStrip';
 import { InfoBanner } from '@/components/ui/InfoBanner';
-import { Tabs } from '@/components/ui/Tabs';
 import { useTripModal } from '@/components/trip/useTripModal';
 import { EditUnitModal } from './EditUnitModal';
 import { SIGNAL_META } from './fleetMeta';
+import { FleetTabs } from './FleetTabs';
 
 const STATUS_META: Record<Exclude<Unit['status'], 'new'>, { label: string; dot: string }> = {
   on_trip: { label: 'En viaje', dot: 'bg-primary' },
@@ -27,7 +26,6 @@ export function UnitsPage() {
   const units = useStore((s) => s.units);
   const syncedAt = useStore((s) => s.unitsSyncedAt);
   const syncUnits = useStore((s) => s.syncUnits);
-  const navigate = useNavigate();
   const { open: openTrip } = useTripModal();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
@@ -35,6 +33,7 @@ export function UnitsPage() {
   const [base, setBase] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [editing, setEditing] = useState<Unit | null>(null);
+  const canEdit = useCan('fleet', 'edit');
 
   const rows = useMemo(() => {
     const q = normalize(query.trim());
@@ -71,29 +70,18 @@ export function UnitsPage() {
         subtitle="No se dan de alta una por una: se consumen de la API del proveedor GPS. Aquí solo se completan datos operativos (económico, base, estado)."
         actions={
           <>
-            <span className="mr-2 flex items-center gap-1.5 text-[11px] text-body">
+            <span className="mr-2 flex items-center gap-1.5 text-[13px] text-body">
               <Dot className="bg-ok" />
               Última sincronización: hoy {fmtTime(syncedAt)} h · Wialon
             </span>
             <Button icon={<RefreshCw size={14} className={clsx(syncing && 'animate-spin')} />} onClick={sync} disabled={syncing}>
               {syncing ? 'Sincronizando…' : 'Sincronizar ahora'}
             </Button>
-            <Button icon={<Settings size={14} />} onClick={() => navigate('/admin/integraciones')}>
-              Configurar integración
-            </Button>
           </>
         }
       />
 
-      <Tabs
-        value="tractos"
-        onChange={(k) => k !== 'tractos' && navigate(k === 'remolques' ? '/flota/remolques' : '/flota/candados')}
-        items={[
-          { key: 'tractos', label: `Tractos (${units.length})` },
-          { key: 'remolques', label: 'Remolques y chasis (20)' },
-          { key: 'candados', label: 'Candados (12)' },
-        ]}
-      />
+      <FleetTabs value="tractos" />
 
       <KpiStrip items={kpis} />
 
@@ -105,7 +93,7 @@ export function UnitsPage() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar económico, placa, ID GPS…"
             aria-label="Buscar económico, placa o ID GPS"
-            className="h-[30px] w-full rounded-[4px] border border-input pr-2 pl-8 text-[12px] placeholder:text-faint focus:border-primary focus:outline-none"
+            className="h-[34px] w-full rounded-[4px] border border-input pr-2 pl-8 text-[14px] placeholder:text-faint focus:border-primary focus:outline-none"
           />
         </div>
         <Select
@@ -141,20 +129,20 @@ export function UnitsPage() {
           ]}
         />
         <div className="flex-1" />
-        <span className="text-[11px] text-muted">{rows.length} unidades</span>
+        <span className="text-[13px] text-muted">{rows.length} unidades</span>
       </div>
 
       <div className="overflow-hidden rounded-md border border-line bg-white">
-        <table className="w-full table-fixed border-collapse text-[12px]">
+        <table className="w-full table-fixed border-collapse text-[14px]">
           <thead>
             <tr>
-              <th className="th w-[90px]">Económico</th>
-              <th className="th w-[100px]">Placa</th>
-              <th className="th w-[170px]">Origen GPS</th>
+              <th className="th w-[110px]">Económico</th>
+              <th className="th w-[110px]">Placa</th>
+              <th className="th w-[220px]">Origen GPS</th>
               <th className="th w-[120px]">Señal</th>
-              <th className="th w-[200px]">Marca / modelo</th>
+              <th className="th w-[240px]">Marca / modelo</th>
               <th className="th w-[170px]">Estado</th>
-              <th className="th w-[130px]">Viaje actual</th>
+              <th className="th w-[170px]">Viaje actual</th>
               <th className="th w-[110px]">Base</th>
               <th className="th w-[110px]">Odómetro</th>
               <th className="th" />
@@ -176,7 +164,7 @@ export function UnitsPage() {
                   <td className={clsx('px-3 font-mono font-bold', u.economic ? 'text-ink' : 'text-faint')}>{u.economic ?? '—'}</td>
                   <td className="px-3 font-mono">{u.plate}</td>
                   <td className="truncate px-3 text-body">
-                    {u.gps.provider} · <span className="font-mono text-[11px]">{u.gps.deviceId}</span>
+                    {u.gps.provider} · <span className="font-mono text-[13px]">{u.gps.deviceId}</span>
                   </td>
                   <td className={clsx('px-3', sig.text)}>
                     <span className="flex items-center gap-1.5">
@@ -197,7 +185,7 @@ export function UnitsPage() {
                   </td>
                   <td className="px-3">
                     {u.currentTripId ? (
-                      <button type="button" onClick={() => openTrip(u.currentTripId!)} className="font-mono font-bold text-primary hover:underline">
+                      <button type="button" onClick={() => openTrip(u.currentTripId!)} className="font-mono font-bold whitespace-nowrap text-primary hover:underline">
                         {u.currentTripId}
                       </button>
                     ) : (
@@ -205,11 +193,13 @@ export function UnitsPage() {
                     )}
                   </td>
                   <td className={clsx('px-3', u.base ? 'text-body' : 'text-faint')}>{u.base ?? '—'}</td>
-                  <td className="px-3 font-mono text-[11px] text-body">{fmtNumber(u.odometerKm)} km</td>
+                  <td className="px-3 font-mono text-[13px] text-body">{fmtNumber(u.odometerKm)} km</td>
                   <td className="px-3 text-right">
-                    <Button size="sm" variant={isNew ? 'primary' : 'secondary'} onClick={() => setEditing(u)}>
-                      {isNew ? 'Completar datos' : 'Editar datos'}
-                    </Button>
+                    {canEdit && (
+                      <Button size="sm" variant={isNew ? 'primary' : 'secondary'} onClick={() => setEditing(u)}>
+                        {isNew ? 'Completar datos' : 'Editar datos'}
+                      </Button>
+                    )}
                   </td>
                 </tr>
               );
