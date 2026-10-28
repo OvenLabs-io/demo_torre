@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import L, { type Map as LeafletMap } from 'leaflet';
 import { Marker, Polyline } from 'react-leaflet';
-import { AlertTriangle, ArrowDown, Check, ChevronDown, MapPin, Plus, Route, X } from 'lucide-react';
+import { AlertTriangle, ArrowDown, Check, ChevronDown, Loader2, MapPin, Plus, Route, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CrewMember } from '@/types/domain';
 import { useCurrentUser, useStore } from '@/store/useStore';
@@ -23,6 +23,7 @@ import {
   phoneDigits,
   routeStops,
   segmentEstimate,
+  useRoadRoutesFor,
   validate,
   type Check as CheckItem,
   type NewTripForm,
@@ -71,7 +72,8 @@ export function NewTripPage() {
 
   const stops = routeStops(f);
   const stopsKey = stops.join('|');
-  const estimates = useMemo(() => estimateRoute(stopsKey ? stopsKey.split('|') : [], geofences), [stopsKey, geofences]);
+  const roadRoutes = useRoadRoutesFor(stops, geofences);
+  const estimates = useMemo(() => estimateRoute(stopsKey ? stopsKey.split('|') : [], geofences), [stopsKey, geofences, roadRoutes]);
   const totalMin = estimates.reduce((s, e) => s + e.minutes, 0);
   const totalKm = estimates.reduce((s, e) => s + e.km, 0);
   const georoute = georoutes.find((g) => g.id === f.georouteId);
@@ -556,6 +558,7 @@ function RoutePoint({
 function useLegText(from: string, to: string): string | null {
   const geofences = useStore((s) => s.geofences);
   const e = from && to ? segmentEstimate(from, to, geofences) : null;
+  if (e?.loading) return 'calculando ruta…';
   return e ? `${fmtDuration(e.minutes)} · ${e.km} km${e.approx ? ' aprox.' : ''}` : null;
 }
 
@@ -652,15 +655,18 @@ function RoutePreview({ stops, estimates }: { stops: string[]; estimates: Return
   const points = stops.map((id) => geofences.find((g) => g.id === id)).map((g) => (g ? centerOf(g) : null));
   const key = stops.join('|');
   const lastKey = useRef('');
+  // Refit when the points change and again when the road routes arrive.
+  const fitKey = `${key}#${estimates.map((e) => e.path.length).join(',')}`;
 
   useEffect(() => {
-    if (!map || key === lastKey.current) return;
-    lastKey.current = key;
+    if (!map || fitKey === lastKey.current) return;
+    lastKey.current = fitKey;
     const pts = [...estimates.flatMap((e) => e.path), ...points.filter((p): p is [number, number] => Boolean(p))];
     if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [28, 28] });
     else if (pts.length === 1) map.setView(pts[0], 10);
-  }, [map, key, estimates, points]);
+  }, [map, fitKey, estimates, points]);
 
+  const loading = estimates.some((e) => e.loading);
   return (
     <div className="relative isolate h-[260px] border-y border-line-soft">
       <BaseMap onReady={setMap} zoom={7}>
@@ -672,10 +678,16 @@ function RoutePreview({ stops, estimates }: { stops: string[]; estimates: Return
       {points.length === 0 && (
         <div className="absolute inset-0 z-[500] flex items-center justify-center bg-white/70 text-[13px] text-muted">Elige salida y destino, o usa una georuta</div>
       )}
-      {estimates.some((e) => e.approx) && (
-        <span className="absolute bottom-1.5 left-2 z-[500] flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] text-med">
-          <AlertTriangle size={11} /> Ruta aproximada en tramos sin ruta guardada
+      {loading ? (
+        <span className="absolute bottom-1.5 left-2 z-[500] flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] text-muted">
+          <Loader2 size={11} className="animate-spin" /> Calculando ruta por carretera…
         </span>
+      ) : (
+        estimates.some((e) => e.approx) && (
+          <span className="absolute bottom-1.5 left-2 z-[500] flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] text-med">
+            <AlertTriangle size={11} /> Sin servicio de rutas: tramo aproximado en línea recta
+          </span>
+        )
       )}
     </div>
   );

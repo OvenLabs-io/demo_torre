@@ -1,6 +1,7 @@
 import type { LatLng } from '@/types/domain';
 import { buildPath, type Path } from '@/lib/geo';
 import { ROUTES } from './routes.generated';
+import { cachedRoadRoute } from '@/lib/roadRoutes';
 
 const cache = new Map<string, Path>();
 
@@ -14,6 +15,9 @@ export function getRoutePath(routeId: string | undefined): Path | null {
     const [from, to] = routeId.split('>');
     const rev = ROUTES[`${to}>${from}`]?.coords as LatLng[] | undefined;
     coords = rev ? [...rev].reverse() : undefined;
+    // Routes fetched at runtime for trips created in the app.
+    const road = cachedRoadRoute(from, to);
+    if (!coords && road && typeof road === 'object') coords = road.coords;
   }
   if (!coords) return null;
   const path = buildPath(coords);

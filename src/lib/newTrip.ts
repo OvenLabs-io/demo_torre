@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { CrewMember, Geofence, LatLng, LogEntry, Trip, TripLeg, Unit, User } from '@/types/domain';
 import { daysUntil, fmtDuration, normalize } from './format';
 import { haversine } from './geo';
@@ -6,6 +7,7 @@ import { getRoutePath, routeId } from '@/mocks/routes';
 import { crewName } from '@/mocks/crew';
 import { legLabel } from '@/mocks/trips';
 import { TENANT_NAME } from '@/config/brand';
+import { cachedRoadRoute, requestRoadRoute, useRoadRoutes } from './roadRoutes';
 
 /** Parada intermedia: geocerca + hora de entrega en esa parada. */
 export interface StopForm {
@@ -90,8 +92,10 @@ export interface SegmentEstimate {
   minutes: number;
   km: number;
   path: LatLng[];
-  /** No stored road route: straight line × 1.3. */
+  /** No road route (yet): straight line × 1.3. */
   approx: boolean;
+  /** The road route is being requested. */
+  loading?: boolean;
 }
 
 export function centerOf(g: Pick<Geofence, 'shape'>): LatLng {
@@ -113,11 +117,34 @@ export function segmentEstimate(fromId: string, toId: string, geofences: Geofenc
       approx: false,
     };
   }
+  const road = cachedRoadRoute(fromId, toId);
+  if (road && typeof road === 'object') {
+    return { minutes: Math.round((road.durationS * 1.2) / 60), km: Math.round(road.distanceM / 1000), path: road.coords, approx: false };
+  }
   const a = geofences.find((g) => g.id === fromId);
   const b = geofences.find((g) => g.id === toId);
   if (!a || !b) return null;
   const km = Math.round((haversine(centerOf(a), centerOf(b)) * 1.3) / 1000);
-  return { minutes: Math.max(20, Math.round((km / 55) * 60)), km, path: [centerOf(a), centerOf(b)], approx: true };
+  return { minutes: Math.max(20, Math.round((km / 55) * 60)), km, path: [centerOf(a), centerOf(b)], approx: true, loading: road === 'loading' };
+}
+
+/**
+ * Requests from OSRM the road route of every consecutive pair without one, and
+ * re-renders when they arrive. Returns the cache (use it as a memo dependency).
+ */
+export function useRoadRoutesFor(stops: string[], geofences: Geofence[]) {
+  const routes = useRoadRoutes((s) => s.routes);
+  const key = stops.join('|');
+  useEffect(() => {
+    for (let i = 1; i < stops.length; i++) {
+      const [from, to] = [stops[i - 1], stops[i]];
+      if (!from || !to || from === to || ROUTES[routeId(from, to)] || ROUTES[routeId(to, from)]) continue;
+      const a = geofences.find((g) => g.id === from);
+      const b = geofences.find((g) => g.id === to);
+      if (a && b) requestRoadRoute(from, to, centerOf(a), centerOf(b));
+    }
+  }, [key, geofences]); // eslint-disable-line react-hooks/exhaustive-deps
+  return routes;
 }
 
 export function estimateRoute(stops: string[], geofences: Geofence[]): SegmentEstimate[] {

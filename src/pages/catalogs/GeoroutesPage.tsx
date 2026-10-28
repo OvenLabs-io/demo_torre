@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import type { Georoute } from '@/types/domain';
 import { useCan, useStore } from '@/store/useStore';
 import { fmtDate, fmtDuration, fmtNumber } from '@/lib/format';
-import { centerOf, estimateRoute } from '@/lib/newTrip';
+import { centerOf, estimateRoute, useRoadRoutesFor } from '@/lib/newTrip';
 import { PageHeader } from '@/components/layout/AppLayout';
 import { BaseMap } from '@/components/map/BaseMap';
 import { corridorPolygon } from '@/components/map/layers';
@@ -40,7 +40,8 @@ export function GeoroutesPage() {
   const selected = georoutes.find((g) => g.id === selectedId) ?? null;
   const shown = draft ?? selected;
   const stops = (shown?.stops ?? []).filter(Boolean);
-  const estimates = useMemo(() => estimateRoute(stops, geofences), [stops.join('|'), geofences]); // eslint-disable-line react-hooks/exhaustive-deps
+  const roadRoutes = useRoadRoutesFor(stops, geofences);
+  const estimates = useMemo(() => estimateRoute(stops, geofences), [stops.join('|'), geofences, roadRoutes]); // eslint-disable-line react-hooks/exhaustive-deps
   const path = estimates.flatMap((e) => e.path);
   const places = geofences.filter((g) => g.type !== 'avoid_zone');
   const placeName = (id: string) => geofences.find((g) => g.id === id)?.name.split(' · ')[0] ?? '—';
@@ -48,7 +49,7 @@ export function GeoroutesPage() {
   useEffect(() => {
     const pts = [...path, ...stops.map((id) => geofences.find((g) => g.id === id)).filter(Boolean).map((g) => centerOf(g!))];
     if (map && pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
-  }, [map, stops.join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, stops.join('|'), path.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const errors = draft
     ? {
